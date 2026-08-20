@@ -33,34 +33,40 @@ export function KpiList({ rows }: { rows: KpiListRow[] }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div className="piq-caption">Total weight allocated: {totalWeight}% / 100%</div>
-      {rows.map((r) => (
-        <div
-          key={r.kpiTeamId}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            padding: "14px 18px",
-            borderRadius: 16,
-            background: "rgba(255,255,255,.35)",
-            border: "1px solid rgba(255,255,255,.5)",
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#181835" }}>{r.name}</div>
-            {r.description ? <div className="piq-caption">{r.description}</div> : null}
-          </div>
-          <div className="piq-caption" style={{ width: 110 }}>
-            Target {r.targetValue} {r.unit ?? ""}
-          </div>
-          <div className="piq-caption" style={{ width: 70 }}>
-            {r.weightPct}% weight
-          </div>
-          <Tag tone={STATUS_TONE[r.status]} dot>
-            {STATUS_LABEL[r.status]}
-          </Tag>
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 560 }}>
+          {rows.map((r) => (
+            <div
+              key={r.kpiTeamId}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "14px 18px",
+                borderRadius: 16,
+                background: "rgba(255,255,255,.35)",
+                border: "1px solid rgba(255,255,255,.5)",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#181835" }}>{r.name}</div>
+                {r.description ? <div className="piq-caption">{r.description}</div> : null}
+              </div>
+              <div className="piq-caption" style={{ width: 110, flexShrink: 0 }}>
+                Target {r.targetValue} {r.unit ?? ""}
+              </div>
+              <div className="piq-caption" style={{ width: 70, flexShrink: 0 }}>
+                {r.weightPct}% weight
+              </div>
+              <div style={{ flexShrink: 0 }}>
+                <Tag tone={STATUS_TONE[r.status]} dot>
+                  {STATUS_LABEL[r.status]}
+                </Tag>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }

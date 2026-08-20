@@ -33,40 +33,44 @@ export function ReviewsTable({ rows }: { rows: ReviewRow[] }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {rows.map((r) => (
-        <Link
-          key={r.id}
-          href={`/reviews/${r.id}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            padding: "14px 18px",
-            borderRadius: 16,
-            background: "rgba(255,255,255,.35)",
-            border: "1px solid rgba(255,255,255,.5)",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          <Avatar name={r.revieweeName} size={36} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#181835" }}>{r.revieweeName}</div>
-            <div className="piq-caption">{r.cycleLabel}</div>
-          </div>
-          <div className="piq-caption" style={{ width: 160 }}>
-            {r.type === "self" ? "Self review" : r.type === "manager" ? "Manager review" : "Peer review"} ·{" "}
-            {r.reviewerName}
-          </div>
-          <div style={{ width: 60, textAlign: "right", fontSize: 14, fontWeight: 500 }}>
-            {r.overallScore != null ? r.overallScore.toFixed(1) : "—"}
-          </div>
-          <Tag tone={STATUS_TONE[r.status]} dot>
-            {STATUS_LABEL[r.status]}
-          </Tag>
-        </Link>
-      ))}
+    <div style={{ overflowX: "auto" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 620 }}>
+        {rows.map((r) => (
+          <Link
+            key={r.id}
+            href={`/reviews/${r.id}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              padding: "14px 18px",
+              borderRadius: 16,
+              background: "rgba(255,255,255,.35)",
+              border: "1px solid rgba(255,255,255,.5)",
+              textDecoration: "none",
+              color: "inherit",
+            }}
+          >
+            <Avatar name={r.revieweeName} size={36} />
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "#181835" }}>{r.revieweeName}</div>
+              <div className="piq-caption">{r.cycleLabel}</div>
+            </div>
+            <div className="piq-caption" style={{ width: 160, flexShrink: 0 }}>
+              {r.type === "self" ? "Self review" : r.type === "manager" ? "Manager review" : "Peer review"} ·{" "}
+              {r.reviewerName}
+            </div>
+            <div style={{ width: 60, flexShrink: 0, textAlign: "right", fontSize: 14, fontWeight: 500 }}>
+              {r.overallScore != null ? r.overallScore.toFixed(1) : "—"}
+            </div>
+            <div style={{ flexShrink: 0 }}>
+              <Tag tone={STATUS_TONE[r.status]} dot>
+                {STATUS_LABEL[r.status]}
+              </Tag>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

@@ -64,7 +64,9 @@ export default async function LearningPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div className="piq-h1">Learning</div>
-          <div className="piq-caption">{courses.length} courses published</div>
+          <div className="piq-caption">
+            {courses.length} course{courses.length === 1 ? "" : "s"} published
+          </div>
         </div>
         {canAuthor ? (
           <Link href="/learning/new">
@@ -106,17 +108,21 @@ export default async function LearningPage() {
           {assignments.length === 0 ? (
             <div className="piq-caption">No learning assignments yet.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {assignments.map((a) => (
-                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
-                  <span style={{ width: 160 }}>{a.member.name}</span>
-                  <span style={{ flex: 1 }}>{a.course.title}</span>
-                  <span style={{ width: 100 }}>{a.progressPct}%</span>
-                  <Tag tone={a.status === "completed" ? "complete" : a.status === "in_progress" ? "onTrack" : "neutral"} dot>
-                    {a.status}
-                  </Tag>
-                </div>
-              ))}
+            <div style={{ overflowX: "auto" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 480 }}>
+                {assignments.map((a) => (
+                  <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
+                    <span style={{ width: 160, flexShrink: 0 }}>{a.member.name}</span>
+                    <span style={{ flex: 1, minWidth: 120 }}>{a.course.title}</span>
+                    <span style={{ width: 100, flexShrink: 0 }}>{a.progressPct}%</span>
+                    <span style={{ flexShrink: 0 }}>
+                      <Tag tone={a.status === "completed" ? "complete" : a.status === "in_progress" ? "onTrack" : "neutral"} dot>
+                        {a.status}
+                      </Tag>
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </FrostCard>
