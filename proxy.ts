@@ -8,24 +8,23 @@ import { createServerClient } from "@supabase/ssr";
 //      own guidance, a proxy matcher change can silently stop covering a
 //      route, so every Server Action re-checks auth itself via lib/authz.ts
 //      rather than relying on this file as the real boundary.
-//   2. Sets a Content-Security-Policy header. Deliberately NOT nonce-based:
-//      a per-request nonce only matches a page's script tags if that page is
-//      dynamically rendered on every request. Several routes here (/login,
-//      /set-password) are statically prerendered at build time, so a nonce
-//      baked into that static HTML can never match a fresh per-request
-//      value — that mismatch previously blocked 100% of scripts in
-//      production. `script-src 'self'` is safe without a nonce because the
-//      app has no inline <script> tags or dangerouslySetInnerHTML anywhere;
-//      every real script is an external /_next/static/ chunk served from
-//      'self'.
+//   2. Sets a per-request CSP nonce (script-src 'nonce-…' 'strict-dynamic'),
+//      following Next.js's documented nonce pattern — Next automatically
+//      applies this same nonce to its own internally-injected scripts
+//      (hydration/RSC streaming), which is why a nonce (not a static
+//      'self'-only policy) is required here: those internal scripts are
+//      inline, and a plain `script-src 'self'` blocks them outright.
+//      IMPORTANT: nonces only work on pages that render fresh per request —
+//      every route this covers must avoid static prerendering (see
+//      `export const dynamic = "force-dynamic"` on app/(auth)/layout.tsx),
+//      or the nonce baked into a build-time HTML snapshot will never match
+//      the fresh value generated below, silently blocking every script.
 export async function proxy(request: NextRequest) {
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const isDev = process.env.NODE_ENV === "development";
   const csp = [
     `default-src 'self'`,
-    `script-src 'self'`,
-    // 'unsafe-inline' on style-src only: every UI primitive in components/ui
-    // uses React inline `style` props by design (the exact frosted-glass
-    // recipe). Inline STYLE injection is a much lower-severity vector than
-    // inline SCRIPT, which stays locked down above.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self'`,
@@ -36,7 +35,10 @@ export async function proxy(request: NextRequest) {
     `frame-ancestors 'none'`,
   ].join("; ");
 
-  let response = NextResponse.next({ request });
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", csp);
 
   const supabase = createServerClient(
@@ -49,7 +51,7 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = NextResponse.next({ request: { headers: requestHeaders } });
           response.headers.set("Content-Security-Policy", csp);
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
