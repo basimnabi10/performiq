@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { FrostCard } from "@/components/ui/FrostCard";
 import { MembersTable } from "@/components/members/MembersTable";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
+import { KpiList } from "@/components/kpis/KpiList";
+import { CreateKpiModal } from "@/components/kpis/CreateKpiModal";
 
 export default async function TeamDetailPage({ params, searchParams }: PageProps<"/teams/[id]">) {
   const { id } = await params;
@@ -16,10 +18,19 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
     include: {
       lead: { select: { name: true } },
       members: { orderBy: { name: "asc" }, include: { team: { select: { name: true } } } },
-      kpiTeams: { include: { kpi: true } },
+      kpiTeams: { include: { kpi: true }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!team) notFound();
+
+  const activeCycle = await prisma.reviewCycle.findFirst({
+    where: {
+      orgId: actor.orgId,
+      status: "in_progress",
+      OR: [{ departmentId: team.departmentId }, { departmentId: null }],
+    },
+    orderBy: { startDate: "desc" },
+  });
 
   const activeTab = tab === "kpis" ? "kpis" : "members";
   const canManage =
@@ -44,6 +55,8 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
         {canManage ? (
           activeTab === "members" ? (
             <InviteMemberModal teams={[{ id: team.id, name: team.name }]} simple />
+          ) : activeCycle ? (
+            <CreateKpiModal cycleId={activeCycle.id} teamId={team.id} />
           ) : null
         ) : null}
       </div>
@@ -83,10 +96,23 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
               status: m.status,
             }))}
           />
+        ) : activeCycle ? (
+          <KpiList
+            rows={team.kpiTeams.map((kt) => ({
+              kpiTeamId: kt.id,
+              kpiId: kt.kpiId,
+              name: kt.kpi.name,
+              description: kt.kpi.description,
+              targetValue: kt.kpi.targetValue,
+              unit: kt.kpi.unit,
+              weightPct: kt.weightPct,
+              status: kt.kpi.status,
+            }))}
+          />
         ) : (
           <div className="piq-caption">
-            KPI management for this team lands in the next build phase (weighted scoring +
-            create-KPI flow).
+            No active review cycle for this team yet — start one from the department dashboard
+            before adding KPIs.
           </div>
         )}
       </FrostCard>

@@ -3,6 +3,7 @@ import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { FrostCard } from "@/components/ui/FrostCard";
 import { StatCard } from "@/components/ui/StatCard";
+import { StartCycleModal } from "@/components/cycles/StartCycleModal";
 
 export default async function HodDashboardPage() {
   const member = await getCurrentMember();
@@ -24,20 +25,26 @@ export default async function HodDashboardPage() {
     prisma.member.count({ where: scopeWhere }),
     prisma.member.count({ where: { ...scopeWhere, status: "invited" } }),
     prisma.reviewCycle.findFirst({
-      where: { orgId: member.orgId, status: "in_progress" },
+      where:
+        member.authRole === "admin"
+          ? { orgId: member.orgId, status: "in_progress" }
+          : { orgId: member.orgId, status: "in_progress", departmentId: member.departmentId },
       orderBy: { startDate: "desc" },
     }),
   ]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <FrostCard tone="ink" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <div className="piq-display" style={{ color: "#fff" }}>
-          {member.authRole === "admin" ? "Organization overview" : "Department overview"}
+      <FrostCard tone="ink" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div>
+          <div className="piq-display" style={{ color: "#fff" }}>
+            {member.authRole === "admin" ? "Organization overview" : "Department overview"}
+          </div>
+          <div className="piq-body" style={{ color: "#A8AFCB", marginTop: 4 }}>
+            {activeCycle ? `${activeCycle.label} is in progress.` : "No review cycle is currently active."}
+          </div>
         </div>
-        <div className="piq-body" style={{ color: "#A8AFCB" }}>
-          {activeCycle ? `${activeCycle.label} is in progress.` : "No review cycle is currently active."}
-        </div>
+        {!activeCycle ? <StartCycleModal departmentId={member.authRole === "hod" ? member.departmentId ?? undefined : undefined} /> : null}
       </FrostCard>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18 }}>
@@ -59,7 +66,7 @@ export default async function HodDashboardPage() {
       <FrostCard>
         <div className="piq-caption">
           KPI performance, pending actions, team mood, and lesson-request approvals light up
-          once KPIs, reviews, and learning are wired up in the next build phases.
+          once learning and analytics are wired up in the next build phases.
         </div>
       </FrostCard>
     </div>
