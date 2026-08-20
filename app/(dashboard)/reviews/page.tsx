@@ -71,7 +71,7 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/reviews"
             {completed} completed · {reviews.length} total{avgScore != null ? ` · avg ${avgScore.toFixed(1)}` : ""}
           </div>
         </div>
-        {activeCycle && scopedMembers.length > 1 ? (
+        {activeCycle && scopedMembers.length > 1 && (actor.authRole === "admin" || actor.authRole === "hod") ? (
           <AssignReviewerModal cycleId={activeCycle.id} members={scopedMembers} />
         ) : null}
       </div>

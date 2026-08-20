@@ -5,6 +5,7 @@ import { authActionClient } from "@/lib/safe-action";
 import { requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, lessonRequestRateLimit } from "@/lib/rateLimit";
+import { logActivity } from "@/lib/audit";
 import { decideLessonRequestSchema, submitLessonRequestSchema } from "@/lib/validation/lessons.schema";
 
 export const submitLessonRequest = authActionClient
@@ -38,6 +39,15 @@ export const decideLessonRequest = authActionClient
     await prisma.lessonRequest.update({
       where: { id: parsedInput.requestId },
       data: { status: parsedInput.decision, decidedById: actor.id, decidedAt: new Date() },
+    });
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: parsedInput.decision === "approved" ? "approved a lesson request" : "declined a lesson request",
+      targetType: "LessonRequest",
+      targetId: request.id,
+      metadata: { topic: request.topic },
     });
 
     revalidatePath("/hod-dashboard");

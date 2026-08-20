@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { odooLookup } from "@/lib/integrations/odoo";
 import { checkRateLimit, inviteRateLimit } from "@/lib/rateLimit";
+import { logActivity } from "@/lib/audit";
 import { inviteMemberSchema, updateDesignationSchema } from "@/lib/validation/members.schema";
 
 export const inviteMember = authActionClient
@@ -77,6 +78,15 @@ export const inviteMember = authActionClient
       await prisma.member.delete({ where: { id: created.id } });
       throw new Error("Couldn't send the invite email. Please try again.");
     }
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: "invited",
+      targetType: "Member",
+      targetId: created.id,
+      metadata: { name: created.name, team: team.name, source: extra.source },
+    });
 
     revalidatePath("/members");
     revalidatePath(`/teams/${team.id}`);

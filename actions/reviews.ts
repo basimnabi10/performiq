@@ -5,6 +5,7 @@ import { authActionClient } from "@/lib/safe-action";
 import { AuthzError, requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { completeReview } from "@/lib/scoring";
+import { logActivity } from "@/lib/audit";
 import { assignReviewerSchema, saveReviewSchema } from "@/lib/validation/reviews.schema";
 
 async function upsertKpiScores(
@@ -59,6 +60,15 @@ export const submitReview = authActionClient
 
     await upsertKpiScores(parsedInput.reviewId, parsedInput.kpiScores);
     await completeReview(parsedInput.reviewId);
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: review.type === "self" ? "submitted a self-review" : "submitted a review",
+      targetType: "Review",
+      targetId: review.id,
+      metadata: { revieweeId: review.revieweeId },
+    });
 
     revalidatePath("/reviews");
     revalidatePath(`/reviews/${parsedInput.reviewId}`);

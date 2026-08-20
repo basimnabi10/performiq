@@ -6,6 +6,7 @@ import { AuthzError, requireCanAuthorCourses, requireRole, requireScopeAccess } 
 import { prisma } from "@/lib/prisma";
 import { assertSafeMarkdown } from "@/lib/sanitize";
 import { gradeQuizAttempt } from "@/lib/quiz";
+import { logActivity } from "@/lib/audit";
 import {
   assignCourseSchema,
   deleteCourseSchema,
@@ -24,7 +25,9 @@ export const saveCourse = authActionClient
     if (parsedInput.id) {
       const existing = await prisma.course.findUnique({ where: { id: parsedInput.id } });
       if (!existing) throw new Error("Course not found.");
-      if (existing.ownerId !== actor.id && actor.authRole === "ic") {
+      // admin/hod can edit any course; manager/ic can only edit their own.
+      const canEditAny = actor.authRole === "admin" || actor.authRole === "hod";
+      if (!canEditAny && existing.ownerId !== actor.id) {
         throw new AuthzError("Only the course owner can edit it.");
       }
     }
@@ -163,7 +166,7 @@ export const markLessonStep = authActionClient
       },
     });
 
-    await syncAssignmentProgress(actor.id, parsedInput.courseId, progress);
+    await syncAssignmentProgress(actor.orgId, actor.id, parsedInput.courseId, progress);
     revalidatePath(`/learning/${parsedInput.courseId}`);
   });
 
@@ -186,12 +189,13 @@ export const submitQuiz = authActionClient
       update: { quizDone: true, quizScore: score },
     });
 
-    await syncAssignmentProgress(actor.id, parsedInput.courseId, progress);
+    await syncAssignmentProgress(actor.orgId, actor.id, parsedInput.courseId, progress);
     revalidatePath(`/learning/${parsedInput.courseId}`);
     return { score };
   });
 
 async function syncAssignmentProgress(
+  orgId: string,
   memberId: string,
   courseId: string,
   progress: { videoDone: boolean; readingDone: boolean; quizDone: boolean },
@@ -209,6 +213,16 @@ async function syncAssignmentProgress(
     await prisma.learnerProgress.update({
       where: { memberId_courseId: { memberId, courseId } },
       data: { completedAt: new Date() },
+    });
+
+    const course = await prisma.course.findUnique({ where: { id: courseId }, select: { title: true } });
+    await logActivity({
+      orgId,
+      actorId: memberId,
+      verb: "completed a course",
+      targetType: "Course",
+      targetId: courseId,
+      metadata: { title: course?.title },
     });
   }
 }

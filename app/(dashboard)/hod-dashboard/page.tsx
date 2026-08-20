@@ -5,6 +5,13 @@ import { FrostCard } from "@/components/ui/FrostCard";
 import { StatCard } from "@/components/ui/StatCard";
 import { StartCycleModal } from "@/components/cycles/StartCycleModal";
 import { LessonApprovalList } from "@/components/learning/LessonApprovalList";
+import { TeamMoodWidget } from "@/components/dashboard/TeamMoodWidget";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+
+function todayDateOnly(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
 
 export default async function HodDashboardPage() {
   const member = await getCurrentMember();
@@ -34,14 +41,26 @@ export default async function HodDashboardPage() {
     }),
   ]);
 
-  const pendingLessonRequests = await prisma.lessonRequest.findMany({
-    where: {
-      status: "pending",
-      member: member.authRole === "admin" ? { orgId: member.orgId } : { departmentId: member.departmentId },
-    },
-    include: { member: { select: { name: true } } },
-    orderBy: { createdAt: "asc" },
-  });
+  const scopeMemberFilter =
+    member.authRole === "admin" ? { orgId: member.orgId } : { departmentId: member.departmentId };
+
+  const [pendingLessonRequests, todaysMoods, recentActivity] = await Promise.all([
+    prisma.lessonRequest.findMany({
+      where: { status: "pending", member: scopeMemberFilter },
+      include: { member: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.moodCheckin.findMany({
+      where: { date: todayDateOnly(), member: scopeMemberFilter },
+      include: { member: { select: { name: true } } },
+    }),
+    prisma.auditLog.findMany({
+      where: { orgId: member.orgId, actor: scopeMemberFilter },
+      include: { actor: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  ]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -82,12 +101,24 @@ export default async function HodDashboardPage() {
         />
       </FrostCard>
 
-      <FrostCard>
-        <div className="piq-caption">
-          KPI performance, pending actions, and team mood light up once analytics are wired up
-          in the next build phase.
-        </div>
-      </FrostCard>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+        <FrostCard>
+          <div className="piq-h3" style={{ marginBottom: 10 }}>
+            Team mood today
+          </div>
+          <TeamMoodWidget
+            entries={todaysMoods.map((m) => ({ memberName: m.member.name, value: m.value, reason: m.reason }))}
+          />
+        </FrostCard>
+        <FrostCard>
+          <div className="piq-h3" style={{ marginBottom: 10 }}>
+            Recent activity
+          </div>
+          <ActivityFeed
+            entries={recentActivity.map((a) => ({ id: a.id, actorName: a.actor.name, verb: a.verb, createdAt: a.createdAt }))}
+          />
+        </FrostCard>
+      </div>
     </div>
   );
 }

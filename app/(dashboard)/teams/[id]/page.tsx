@@ -33,10 +33,12 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
   });
 
   const activeTab = tab === "kpis" ? "kpis" : "members";
+  // Invite/create-KPI are admin/hod-only actions (see actions/members.ts,
+  // actions/kpis.ts) — managers get team-scoped visibility here, not these
+  // management actions, so the buttons stay hidden for them rather than
+  // appearing and then failing server-side.
   const canManage =
-    actor.authRole === "admin" ||
-    (actor.authRole === "hod" && actor.departmentId === team.departmentId) ||
-    (actor.authRole === "manager" && actor.teamId === team.id);
+    actor.authRole === "admin" || (actor.authRole === "hod" && actor.departmentId === team.departmentId);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

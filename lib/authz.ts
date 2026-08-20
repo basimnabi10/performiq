@@ -113,29 +113,29 @@ export async function requireScopeAccess(
 ): Promise<void> {
   if (member.authRole === "admin") return;
 
-  if (scope.departmentId) {
-    if (member.authRole !== "hod" || member.departmentId !== scope.departmentId) {
-      throw new AuthzError("This department is outside your scope.");
+  // Branch on the ACTOR's role first, not on which scope fields happen to be
+  // set — a caller may legitimately pass both teamId and departmentId (e.g.
+  // "this member's team + department"), and a manager's team-level access
+  // must still be checked even when a departmentId is also present.
+  if (member.authRole === "hod") {
+    const departmentId =
+      scope.departmentId ??
+      (scope.teamId
+        ? (await prisma.team.findUnique({ where: { id: scope.teamId }, select: { departmentId: true } }))
+            ?.departmentId
+        : undefined);
+    if (!departmentId || member.departmentId !== departmentId) {
+      throw new AuthzError("This is outside your department.");
     }
     return;
   }
 
-  if (scope.teamId) {
-    if (member.authRole === "hod") {
-      const team = await prisma.team.findUnique({
-        where: { id: scope.teamId },
-        select: { departmentId: true },
-      });
-      if (!team || team.departmentId !== member.departmentId) {
-        throw new AuthzError("This team is outside your department.");
-      }
-      return;
-    }
-    if (member.authRole === "manager" && member.teamId === scope.teamId) {
-      return;
-    }
-    throw new AuthzError("This team is outside your scope.");
+  if (member.authRole === "manager") {
+    if (scope.teamId && member.teamId === scope.teamId) return;
+    throw new AuthzError("This is outside your team.");
   }
+
+  throw new AuthzError("You don't have access to this scope.");
 }
 
 /**

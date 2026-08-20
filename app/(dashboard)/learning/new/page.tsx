@@ -21,7 +21,8 @@ export default async function NewCoursePage({ searchParams }: PageProps<"/learni
       where: { id: editId },
       include: { article: true, questions: { include: { options: true }, orderBy: { order: "asc" } } },
     });
-    if (course && (course.ownerId === actor.id || actor.authRole !== "ic")) {
+    const canEditAny = actor.authRole === "admin" || actor.authRole === "hod";
+    if (course && (course.ownerId === actor.id || canEditAny)) {
       initial = {
         id: course.id,
         title: course.title,

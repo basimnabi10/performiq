@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { authActionClient } from "@/lib/safe-action";
 import { requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/audit";
 import { startReviewCycleSchema } from "@/lib/validation/cycles.schema";
 
 /**
@@ -61,6 +62,15 @@ export const startReviewCycle = authActionClient
       }));
 
     await prisma.review.createMany({ data: [...selfReviews, ...managerReviews], skipDuplicates: true });
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: "started a review cycle",
+      targetType: "ReviewCycle",
+      targetId: cycle.id,
+      metadata: { label: cycle.label },
+    });
 
     revalidatePath("/reviews");
     revalidatePath("/hod-dashboard");
