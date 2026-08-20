@@ -8,20 +8,24 @@ import { createServerClient } from "@supabase/ssr";
 //      own guidance, a proxy matcher change can silently stop covering a
 //      route, so every Server Action re-checks auth itself via lib/authz.ts
 //      rather than relying on this file as the real boundary.
-//   2. Sets a per-request CSP nonce (script-src 'nonce-…' 'strict-dynamic'),
-//      following Next.js's documented nonce pattern — this is the app's XSS
-//      hardening backstop, on top of never using dangerouslySetInnerHTML and
-//      rendering user markdown without rehype-raw (see lib/sanitize.ts).
+//   2. Sets a Content-Security-Policy header. Deliberately NOT nonce-based:
+//      a per-request nonce only matches a page's script tags if that page is
+//      dynamically rendered on every request. Several routes here (/login,
+//      /set-password) are statically prerendered at build time, so a nonce
+//      baked into that static HTML can never match a fresh per-request
+//      value — that mismatch previously blocked 100% of scripts in
+//      production. `script-src 'self'` is safe without a nonce because the
+//      app has no inline <script> tags or dangerouslySetInnerHTML anywhere;
+//      every real script is an external /_next/static/ chunk served from
+//      'self'.
 export async function proxy(request: NextRequest) {
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const isDev = process.env.NODE_ENV === "development";
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self'`,
     // 'unsafe-inline' on style-src only: every UI primitive in components/ui
     // uses React inline `style` props by design (the exact frosted-glass
     // recipe). Inline STYLE injection is a much lower-severity vector than
-    // inline SCRIPT, which stays locked down by the nonce below.
+    // inline SCRIPT, which stays locked down above.
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self'`,
@@ -32,10 +36,7 @@ export async function proxy(request: NextRequest) {
     `frame-ancestors 'none'`,
   ].join("; ");
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-nonce", nonce);
-
-  let response = NextResponse.next({ request: { headers: requestHeaders } });
+  let response = NextResponse.next({ request });
   response.headers.set("Content-Security-Policy", csp);
 
   const supabase = createServerClient(
@@ -48,7 +49,7 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request: { headers: requestHeaders } });
+          response = NextResponse.next({ request });
           response.headers.set("Content-Security-Policy", csp);
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
