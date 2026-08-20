@@ -1,26 +1,206 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+ * PerformIQ design tokens — ported verbatim from the design export's
+ * tokens/{colors,typography,spacing,effects}.css.
+ * ------------------------------------------------------------------------- */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ---- Primary · Daybreak / Blue Ribbon ---- */
+  --blue-50: #f4f7ff;
+  --blue-100: #e7eefe;
+  --blue-200: #d3e0fe;
+  --blue-300: #8bb0ff; /* gradient end */
+  --blue-400: #5883fb;
+  --blue-500: #3a63fa;
+  --blue-600: #273ff9; /* brand / primary action */
+  --blue-700: #1c10c9;
+  --blue-900: #0e067d;
+
+  /* ---- Accent · Electric Lime (reserved brand accent, used sparingly) ---- */
+  --lime-100: #f1ffc0;
+  --lime-200: #e3ff3b; /* accent */
+  --lime-300: #d6f200;
+  --lime-500: #b3c300;
+  --lime-800: #625a00;
+  --lime-950: #2c2a00;
+
+  /* ---- Neutrals · Indigo Slate ---- */
+  --slate-50: #f8f8fa;
+  --slate-100: #eaefff; /* gradient start */
+  --slate-200: #e0e2ea;
+  --slate-300: #cacddc;
+  --slate-400: #a8afcb;
+  --slate-500: #767fa5;
+  --slate-600: #596392;
+  --slate-700: #454d7a;
+  --slate-800: #252944;
+  --slate-900: #181835; /* darkest ink */
+  --slate-950: #121425;
+
+  /* ---- Semantic (minimal — app trends monochrome blue/slate) ---- */
+  --success: #2fbf71;
+  --warning: #faad14;
+  --error: #ff5a5f;
+
+  --color-primary: var(--blue-600);
+  --color-primary-hover: var(--blue-500);
+  --color-primary-active: var(--blue-700);
+  --color-accent: var(--lime-200);
+
+  --text-strong: var(--slate-900);
+  --text-body: var(--slate-700);
+  --text-secondary: var(--slate-600);
+  --text-tertiary: var(--slate-500);
+  --text-placeholder: var(--slate-400);
+  --text-on-primary: #ffffff;
+
+  --border-hairline: var(--slate-200);
+  --divider: rgba(168, 175, 203, 0.25);
+
+  --surface-frost: rgba(255, 255, 255, 0.2);
+  --surface-frost-strong: rgba(255, 255, 255, 0.55);
+  --surface-frost-border: rgba(255, 255, 255, 0.4);
+  --surface-ink: #181835;
+
+  --bg-gradient: linear-gradient(117deg, #eaefff 42.93%, #8bb0ff 100%);
+
+  /* ---- Typography ---- */
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --weight-regular: 400;
+  --weight-medium: 500;
+
+  --text-display: 38px;
+  --text-h1: 30px;
+  --text-h2: 24px;
+  --text-h3: 20px;
+  --text-subtitle: 16px;
+  --text-body-size: 14px;
+  --text-caption: 12px;
+  --text-micro: 11px;
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.35;
+  --leading-body: 1.55;
+
+  --tracking-display: -0.02em;
+  --tracking-tight: -0.01em;
+
+  /* ---- Spacing & radius ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 28px;
+  --space-7: 34px;
+  --space-8: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-card: 24px;
+  --radius-pill: 999px;
+
+  --control-sm: 40px;
+  --control-md: 46px;
+  --control-lg: 52px;
+
+  --bento-gap: 18px;
+  --page-pad: 28px;
+
+  /* ---- Frost / shadow / elevation ---- */
+  --frost-blur: 35px;
+  --frost-fill: rgba(255, 255, 255, 0.2);
+  --frost-fill-strong: rgba(255, 255, 255, 0.55);
+  --frost-border: 1px solid rgba(255, 255, 255, 0.4);
+
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-float: 0 10px 24px rgba(70, 100, 190, 0.18);
+  --shadow-primary: 0 10px 24px rgba(39, 63, 249, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+
+  --focus-ring: 0 0 0 4px rgba(39, 63, 249, 0.12);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--blue-600);
+  --color-accent: var(--lime-200);
+  --font-sans: var(--font-plus-jakarta);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Reusable frosted-surface class — the canonical PerformIQ card. */
+.piq-frost {
+  background: var(--frost-fill);
+  border: var(--frost-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: blur(var(--frost-blur));
+  backdrop-filter: blur(var(--frost-blur));
+}
+
+.piq-display {
+  font: var(--weight-medium) var(--text-display) / var(--leading-tight) var(--font-sans);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-strong);
+}
+.piq-h1 {
+  font: var(--weight-medium) var(--text-h1) / var(--leading-snug) var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-strong);
+}
+.piq-h2 {
+  font: var(--weight-medium) var(--text-h2) / var(--leading-snug) var(--font-sans);
+  color: var(--text-strong);
+}
+.piq-h3 {
+  font: var(--weight-medium) var(--text-h3) / var(--leading-snug) var(--font-sans);
+  color: var(--text-strong);
+}
+.piq-subtitle {
+  font: var(--weight-medium) var(--text-subtitle) / var(--leading-snug) var(--font-sans);
+  color: var(--text-body);
+}
+.piq-body {
+  font: var(--weight-regular) var(--text-body-size) / var(--leading-body) var(--font-sans);
+  color: var(--text-body);
+}
+.piq-caption {
+  font: var(--weight-regular) var(--text-caption) / var(--leading-snug) var(--font-sans);
+  color: var(--text-tertiary);
+}
+.piq-num {
+  font-variant-numeric: tabular-nums;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  color: var(--text-strong);
+  background-image: var(--bg-gradient), url("/assets/frost-background.png");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+iconify-icon {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

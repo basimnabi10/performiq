@@ -2,13 +2,14 @@
 // See /Users/fida/.claude/plans/cosmic-giggling-sketch.md for design rationale.
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
+// Prisma ORM 7: connection URLs live in prisma.config.ts (CLI) and are passed
+// to a driver adapter at runtime (lib/prisma.ts) — not in this schema file.
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
 }
 
 // ---------------------------------------------------------------------------
