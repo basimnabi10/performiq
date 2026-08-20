@@ -25,6 +25,10 @@ export const login = actionClient
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      // Logged server-side only (visible in host runtime logs) -- the
+      // user-facing message stays generic so we don't leak whether an
+      // email exists or expose internal config errors to the client.
+      console.error("Supabase sign-in error:", error.status, error.message);
       throw new Error("Incorrect email or password.");
     }
     redirect("/dashboard");
@@ -55,6 +59,7 @@ export const setPassword = actionClient
     }
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
+      console.error("Supabase set-password error:", error.status, error.message);
       throw new Error("Couldn't set your password. Please try again.");
     }
     redirect("/dashboard");
