@@ -137,3 +137,19 @@ export async function requireScopeAccess(
     throw new AuthzError("This team is outside your scope.");
   }
 }
+
+/**
+ * Course authoring rights: admin/hod/manager always have them; an `ic` only
+ * gains them after an HOD explicitly approves their "teach a lesson"
+ * request (LessonRequest.status === "approved").
+ */
+export async function requireCanAuthorCourses(member: Member): Promise<void> {
+  if (member.authRole !== "ic") return;
+
+  const approved = await prisma.lessonRequest.findFirst({
+    where: { memberId: member.id, status: "approved" },
+  });
+  if (!approved) {
+    throw new AuthzError("Ask your HOD to approve a lesson request before authoring courses.");
+  }
+}

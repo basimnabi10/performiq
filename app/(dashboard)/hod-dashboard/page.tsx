@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { FrostCard } from "@/components/ui/FrostCard";
 import { StatCard } from "@/components/ui/StatCard";
 import { StartCycleModal } from "@/components/cycles/StartCycleModal";
+import { LessonApprovalList } from "@/components/learning/LessonApprovalList";
 
 export default async function HodDashboardPage() {
   const member = await getCurrentMember();
@@ -32,6 +33,15 @@ export default async function HodDashboardPage() {
       orderBy: { startDate: "desc" },
     }),
   ]);
+
+  const pendingLessonRequests = await prisma.lessonRequest.findMany({
+    where: {
+      status: "pending",
+      member: member.authRole === "admin" ? { orgId: member.orgId } : { departmentId: member.departmentId },
+    },
+    include: { member: { select: { name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -64,9 +74,18 @@ export default async function HodDashboardPage() {
       </div>
 
       <FrostCard>
+        <div className="piq-h3" style={{ marginBottom: 10 }}>
+          Lesson requests
+        </div>
+        <LessonApprovalList
+          requests={pendingLessonRequests.map((r) => ({ id: r.id, memberName: r.member.name, topic: r.topic }))}
+        />
+      </FrostCard>
+
+      <FrostCard>
         <div className="piq-caption">
-          KPI performance, pending actions, team mood, and lesson-request approvals light up
-          once learning and analytics are wired up in the next build phases.
+          KPI performance, pending actions, and team mood light up once analytics are wired up
+          in the next build phase.
         </div>
       </FrostCard>
     </div>
