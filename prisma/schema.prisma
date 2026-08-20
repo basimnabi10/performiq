@@ -1,0 +1,539 @@
+// PerformIQ — production schema.
+// See /Users/fida/.claude/plans/cosmic-giggling-sketch.md for design rationale.
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum AuthRole {
+  admin
+  hod
+  manager
+  ic
+}
+
+enum MemberStatus {
+  active
+  invited
+}
+
+enum MemberSource {
+  odoo
+  manual
+}
+
+enum ReviewCycleStatus {
+  planning
+  in_progress
+  closed
+}
+
+enum ReviewType {
+  self
+  manager
+  peer
+}
+
+enum ReviewStatus {
+  draft
+  pending
+  in_progress
+  completed
+}
+
+enum KpiMetricType {
+  number
+  percentage
+  rating
+  currency
+  days
+}
+
+enum KpiDirection {
+  higher_is_better
+  lower_is_better
+}
+
+enum KpiCadence {
+  weekly
+  monthly
+  quarterly
+}
+
+enum KpiStatus {
+  on
+  below
+  new
+}
+
+enum CourseLevel {
+  core
+  advanced
+}
+
+enum CourseStatus {
+  draft
+  published
+}
+
+enum LearningAssignmentStatus {
+  not_started
+  in_progress
+  completed
+}
+
+enum LessonRequestStatus {
+  pending
+  approved
+  declined
+}
+
+// ---------------------------------------------------------------------------
+// Org / Department / Team
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  departments  Department[]
+  teams        Team[]
+  members      Member[]
+  reviewCycles ReviewCycle[]
+  kpis         Kpi[]
+  courses      Course[]
+  auditLogs    AuditLog[]
+}
+
+model Department {
+  id           String  @id @default(cuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name         String
+  headMemberId String?
+  head         Member? @relation("DepartmentHead", fields: [headMemberId], references: [id])
+
+  teams        Team[]
+  members      Member[]     @relation("DepartmentMembers")
+  reviewCycles ReviewCycle[]
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId])
+}
+
+model Team {
+  id           String   @id @default(cuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  name         String
+  leadMemberId String?
+  lead         Member?  @relation("TeamLead", fields: [leadMemberId], references: [id])
+
+  members  Member[]  @relation("TeamMembers")
+  kpiTeams KpiTeam[]
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId])
+  @@index([departmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Member (application user)
+// ---------------------------------------------------------------------------
+
+model Member {
+  id           String       @id @default(cuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  authUserId   String?      @unique // links to Supabase auth.users.id once activated
+  name         String
+  email        String       @unique
+  avatarUrl    String?
+  jobTitle     String?
+
+  teamId       String?
+  team         Team?       @relation("TeamMembers", fields: [teamId], references: [id])
+  departmentId String?
+  department   Department? @relation("DepartmentMembers", fields: [departmentId], references: [id])
+
+  status   MemberStatus @default(invited)
+  empId    String?
+  location String?
+  phone    String?
+  joinedDate DateTime?
+
+  managerId String?
+  manager   Member?  @relation("MemberManager", fields: [managerId], references: [id])
+  reports   Member[] @relation("MemberManager")
+
+  workType String?
+  source   MemberSource @default(manual)
+  authRole AuthRole     @default(ic)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teamsLed            Team[]       @relation("TeamLead")
+  departmentsHeaded    Department[] @relation("DepartmentHead")
+  reviewsAsReviewee    Review[]     @relation("Reviewee")
+  reviewsAsReviewer    Review[]     @relation("Reviewer")
+  assignmentsAsReviewee ReviewAssignment[] @relation("AssignmentReviewee")
+  assignmentsAsReviewer ReviewAssignment[] @relation("AssignmentReviewer")
+  reviewerGrantsReceived ReviewerGrant[] @relation("GrantReviewer")
+  reviewerGrantsForMe    ReviewerGrant[] @relation("GrantReviewee")
+  reviewerGrantsIssued   ReviewerGrant[] @relation("GrantIssuer")
+
+  memberKpiScores     MemberKpiScore[]
+  learningAssignments LearningAssignment[] @relation("AssignmentMember")
+  assignmentsGiven    LearningAssignment[] @relation("AssignmentAssignedBy")
+  learnerProgress     LearnerProgress[]
+  lessonRequests      LessonRequest[]      @relation("LessonRequester")
+  lessonRequestsDecided LessonRequest[]    @relation("LessonDecider")
+  moodCheckins        MoodCheckin[]
+  ownedKpis           Kpi[]
+  ownedCourses        Course[]
+  auditLogs           AuditLog[]
+
+  @@index([orgId])
+  @@index([teamId])
+  @@index([departmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Review cycles, reviews, KPI scoring
+// ---------------------------------------------------------------------------
+
+model ReviewCycle {
+  id           String            @id @default(cuid())
+  orgId        String
+  org          Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  label        String
+  departmentId String?
+  department   Department?       @relation(fields: [departmentId], references: [id])
+  status       ReviewCycleStatus @default(planning)
+  startDate    DateTime
+  endDate      DateTime
+
+  reviews     Review[]
+  assignments ReviewAssignment[]
+  kpis        Kpi[]
+  memberScores MemberKpiScore[]
+  snapshots   CycleSnapshot[]
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId])
+  @@index([departmentId])
+}
+
+model Review {
+  id           String       @id @default(cuid())
+  cycleId      String
+  cycle        ReviewCycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  revieweeId   String
+  reviewee     Member       @relation("Reviewee", fields: [revieweeId], references: [id])
+  reviewerId   String
+  reviewer     Member       @relation("Reviewer", fields: [reviewerId], references: [id])
+  type         ReviewType
+  status       ReviewStatus @default(draft)
+  submittedAt  DateTime?
+  overallScore Decimal?     @db.Decimal(3, 2)
+
+  kpiScores ReviewKpiScore[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cycleId, revieweeId, reviewerId, type])
+  @@index([revieweeId])
+  @@index([reviewerId])
+  @@index([cycleId])
+}
+
+model ReviewKpiScore {
+  id        String   @id @default(cuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  kpiId     String
+  kpi       Kpi      @relation(fields: [kpiId], references: [id])
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([reviewId, kpiId])
+  @@index([kpiId])
+}
+
+model ReviewAssignment {
+  id         String      @id @default(cuid())
+  cycleId    String
+  cycle      ReviewCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  revieweeId String
+  reviewee   Member      @relation("AssignmentReviewee", fields: [revieweeId], references: [id])
+  reviewerId String
+  reviewer   Member      @relation("AssignmentReviewer", fields: [reviewerId], references: [id])
+  type       ReviewType
+
+  createdAt DateTime @default(now())
+
+  @@unique([cycleId, revieweeId, reviewerId, type])
+  @@index([revieweeId])
+  @@index([reviewerId])
+}
+
+model ReviewerGrant {
+  id          String   @id @default(cuid())
+  reviewerId  String
+  reviewer    Member   @relation("GrantReviewer", fields: [reviewerId], references: [id])
+  revieweeId  String
+  reviewee    Member   @relation("GrantReviewee", fields: [revieweeId], references: [id])
+  grantedById String
+  grantedBy   Member   @relation("GrantIssuer", fields: [grantedById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([reviewerId, revieweeId])
+}
+
+// ---------------------------------------------------------------------------
+// KPIs
+// ---------------------------------------------------------------------------
+
+model Kpi {
+  id            String        @id @default(cuid())
+  orgId         String
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  cycleId       String
+  cycle         ReviewCycle   @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  ownerId       String
+  owner         Member        @relation(fields: [ownerId], references: [id])
+  name          String
+  description   String?
+  metricType    KpiMetricType
+  direction     KpiDirection  @default(higher_is_better)
+  targetValue   String // display string, e.g. "≥ 4.5"
+  targetNumeric Decimal?      @db.Decimal(10, 2)
+  unit          String?
+  cadence       KpiCadence    @default(quarterly)
+  status        KpiStatus     @default(new)
+
+  kpiTeams     KpiTeam[]
+  reviewScores ReviewKpiScore[]
+  memberScores MemberKpiScore[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([cycleId])
+}
+
+// KPI <-> Team join. Weight lives here (not on Kpi) because the same KPI can
+// apply to multiple teams with independently-enforced weight-sum-<=100 budgets.
+model KpiTeam {
+  id        String   @id @default(cuid())
+  kpiId     String
+  kpi       Kpi      @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  weightPct Int
+  createdAt DateTime @default(now())
+
+  @@unique([kpiId, teamId])
+  @@index([teamId])
+}
+
+// Real, persisted per-member-per-KPI-per-cycle fact table. Populated by
+// lib/scoring.ts whenever a Review transitions to `completed`. Replaces the
+// mock's fabricated hash-based per-KPI scores.
+model MemberKpiScore {
+  id          String      @id @default(cuid())
+  memberId    String
+  member      Member      @relation(fields: [memberId], references: [id])
+  kpiId       String
+  kpi         Kpi         @relation(fields: [kpiId], references: [id])
+  cycleId     String
+  cycle       ReviewCycle @relation(fields: [cycleId], references: [id])
+  score       Decimal     @db.Decimal(3, 2) // 1.00-5.00
+  sourceCount Int         @default(1)
+  computedAt  DateTime    @default(now())
+
+  @@unique([memberId, kpiId, cycleId])
+  @@index([kpiId, cycleId])
+}
+
+// ---------------------------------------------------------------------------
+// Learning / LMS
+// ---------------------------------------------------------------------------
+
+model Course {
+  id               String       @id @default(cuid())
+  orgId            String
+  org              Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  ownerId          String
+  owner            Member       @relation(fields: [ownerId], references: [id])
+  title            String
+  category         String?
+  level            CourseLevel  @default(core)
+  duration         String?
+  icon             String?
+  summary          String?
+  videoUrl         String?
+  videoDurationSec Int?
+  status           CourseStatus @default(draft)
+
+  article     CourseArticle?
+  questions   QuizQuestion[]
+  assignments LearningAssignment[]
+  progress    LearnerProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+}
+
+model CourseArticle {
+  id           String   @id @default(cuid())
+  courseId     String   @unique
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title        String
+  subtitle     String?
+  bodyMarkdown String
+  updatedAt    DateTime @updatedAt
+}
+
+model QuizQuestion {
+  id       String @id @default(cuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order    Int
+  text     String
+
+  options QuizOption[]
+
+  @@index([courseId])
+}
+
+model QuizOption {
+  id         String       @id @default(cuid())
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean      @default(false) // never sent to learner client until after submission
+  order      Int
+
+  @@index([questionId])
+}
+
+model LearningAssignment {
+  id           String                    @id @default(cuid())
+  memberId     String
+  member       Member                    @relation("AssignmentMember", fields: [memberId], references: [id])
+  courseId     String
+  course       Course                    @relation(fields: [courseId], references: [id])
+  assignedById String
+  assignedBy   Member                    @relation("AssignmentAssignedBy", fields: [assignedById], references: [id])
+  dueDate      DateTime?
+  status       LearningAssignmentStatus  @default(not_started)
+  progressPct  Int                       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([memberId, courseId])
+  @@index([courseId])
+}
+
+model LearnerProgress {
+  id          String    @id @default(cuid())
+  memberId    String
+  member      Member    @relation(fields: [memberId], references: [id])
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id])
+  videoDone   Boolean   @default(false)
+  readingDone Boolean   @default(false)
+  quizDone    Boolean   @default(false)
+  quizScore   Int?
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([memberId, courseId])
+}
+
+model LessonRequest {
+  id          String               @id @default(cuid())
+  memberId    String
+  member      Member               @relation("LessonRequester", fields: [memberId], references: [id])
+  topic       String
+  why         String?
+  status      LessonRequestStatus  @default(pending)
+  decidedById String?
+  decidedBy   Member?              @relation("LessonDecider", fields: [decidedById], references: [id])
+  decidedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+}
+
+// ---------------------------------------------------------------------------
+// Mood, snapshots, audit
+// ---------------------------------------------------------------------------
+
+model MoodCheckin {
+  id       String   @id @default(cuid())
+  memberId String
+  member   Member   @relation(fields: [memberId], references: [id])
+  date     DateTime @db.Date
+  value    Int // 1-5
+  reason   String? // visible to HOD/manager (own scope) or the member themself only
+
+  createdAt DateTime @default(now())
+
+  @@unique([memberId, date])
+}
+
+model CycleSnapshot {
+  id        String      @id @default(cuid())
+  cycleId   String
+  cycle     ReviewCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  scopeType String // "org" | "department" | "team"
+  scopeId   String?
+  avgScore  Decimal     @db.Decimal(3, 2)
+  headcount Int
+
+  createdAt DateTime @default(now())
+
+  @@index([cycleId])
+}
+
+model AuditLog {
+  id         String       @id @default(cuid())
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actorId    String
+  actor      Member       @relation(fields: [actorId], references: [id])
+  verb       String
+  targetType String
+  targetId   String
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, createdAt])
+}
