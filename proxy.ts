@@ -87,6 +87,21 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|assets/|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)",
+    {
+      // Excluding Next.js's own prefetch requests (not just static assets)
+      // matters here specifically: the sidebar renders 5-6 <Link>s at once,
+      // which Next prefetches concurrently the moment they're visible. Each
+      // prefetch used to hit this file and call supabase.auth.getUser(),
+      // and near a token's expiry, two of those concurrent calls could race
+      // Supabase's refresh-token rotation -- the loser's now-already-used
+      // refresh token comes back invalid, killing the whole session. This
+      // is a UX convenience layer (see comment above), so skipping it for
+      // prefetches costs nothing: lib/authz.ts still gates the real render.
+      source: "/((?!_next/static|_next/image|favicon.ico|assets/|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

@@ -7,7 +7,15 @@ import { Button } from "@/components/ui/Button";
 import { FrostCard } from "@/components/ui/FrostCard";
 import { IconButton } from "@/components/ui/IconButton";
 
-export function StartCycleModal({ departmentId }: { departmentId?: string }) {
+export function StartCycleModal({
+  departmentId,
+  variant = "primary",
+  icon = "ant-design:play-circle-outlined",
+}: {
+  departmentId?: string;
+  variant?: "primary" | "secondary";
+  icon?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -19,7 +27,7 @@ export function StartCycleModal({ departmentId }: { departmentId?: string }) {
 
   if (!open) {
     return (
-      <Button icon="ant-design:play-circle-outlined" onClick={() => setOpen(true)}>
+      <Button variant={variant} icon={icon} onClick={() => setOpen(true)}>
         Start review cycle
       </Button>
     );
