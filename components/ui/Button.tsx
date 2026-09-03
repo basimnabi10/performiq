@@ -17,13 +17,13 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 // (the header CTA and the frosted quick-action buttons are two different
 // heights/type-sizes by design, not a shared default).
 const MD_METRICS: Record<string, { height: number; padX: number; fontSize: number; gap: number }> = {
-  primary: { height: 44, padX: 20, fontSize: 14, gap: 8 },
-  secondary: { height: 46, padX: 18, fontSize: 13, gap: 9 },
-  ghost: { height: 46, padX: 18, fontSize: 13, gap: 9 },
-  text: { height: 46, padX: 18, fontSize: 13, gap: 9 },
+  primary: { height: 50, padX: 24, fontSize: 15, gap: 9 },
+  secondary: { height: 50, padX: 20, fontSize: 14, gap: 10 },
+  ghost: { height: 50, padX: 20, fontSize: 14, gap: 10 },
+  text: { height: 50, padX: 20, fontSize: 14, gap: 10 },
 };
 const SM_METRICS = { height: 40, padX: 16, fontSize: 12, gap: 6 };
-const LG_METRICS = { height: 52, padX: 26, fontSize: 15, gap: 10 };
+const LG_METRICS = { height: 56, padX: 28, fontSize: 16, gap: 10 };
 
 const VARIANTS: Record<string, React.CSSProperties> = {
   primary: {
@@ -70,7 +70,7 @@ export function Button({
     gap: m.gap,
     height: m.height,
     padding: `0 ${m.padX}px`,
-    borderRadius: 14,
+    borderRadius: 16,
     border: "none",
     fontFamily: "'Switzer', system-ui, sans-serif",
     fontWeight: 500,
@@ -81,7 +81,7 @@ export function Button({
     whiteSpace: "nowrap",
   };
 
-  const iconWidth = size === "sm" ? 14 : size === "lg" ? 18 : variant === "primary" ? 15 : 17;
+  const iconWidth = size === "sm" ? 14 : size === "lg" ? 19 : variant === "primary" ? 16 : 18;
   const iconColor = variant === "primary" ? undefined : "#273FF9";
 
   return (

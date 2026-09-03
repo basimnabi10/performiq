@@ -358,11 +358,11 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 13, color: "#767FA5", fontWeight: 500 }}>{breadcrumb}</div>
-          <div style={{ fontSize: 28, fontWeight: 500, letterSpacing: "-.02em", color: "#181835", marginTop: 2 }}>
+          <div style={{ fontSize: 14, color: "#767FA5", fontWeight: 500 }}>{breadcrumb}</div>
+          <div style={{ fontSize: 36, fontWeight: 500, letterSpacing: "-.02em", color: "#181835", marginTop: 2 }}>
             {overviewTitle}
           </div>
-          <div style={{ fontSize: 14, color: "#596392", marginTop: 3 }}>
+          <div style={{ fontSize: 15, color: "#596392", marginTop: 3 }}>
             {activeCycle.label} · {roleViewLabel}
           </div>
         </div>
@@ -384,17 +384,18 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
-              fontSize: 12,
+              gap: 8,
+              height: 50,
+              fontSize: 14,
               fontWeight: 500,
-              padding: "8px 13px",
-              borderRadius: 8,
+              padding: "0 18px",
+              borderRadius: 16,
               color: "#273FF9",
               background: "rgba(58,99,250,.13)",
               whiteSpace: "nowrap",
             }}
           >
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#273FF9", boxShadow: "0 0 0 3px rgba(39,63,249,.18)" }} />
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#273FF9", boxShadow: "0 0 0 3px rgba(39,63,249,.18)" }} />
             {activeCycle.label} · {daysToEnd} days left
           </span>
           <StartCycleModal departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined} />

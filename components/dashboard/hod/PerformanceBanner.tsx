@@ -87,10 +87,10 @@ export function PerformanceBanner({
             <iconify-icon icon="ant-design:rise-outlined" width="14" />
             Performance vs last cycle
           </span>
-          <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: "-.02em", color: "#fff", marginTop: 16, lineHeight: 1.25 }}>
+          <div style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-.02em", color: "#fff", marginTop: 16, lineHeight: 1.25 }}>
             {sentence}
           </div>
-          <div style={{ fontSize: 14, color: "#A8AFCB", marginTop: 10, lineHeight: 1.55 }}>{sub}</div>
+          <div style={{ fontSize: 15, color: "#A8AFCB", marginTop: 10, lineHeight: 1.55 }}>{sub}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap", minWidth: 0 }}>
           <div style={{ textAlign: "right" }}>

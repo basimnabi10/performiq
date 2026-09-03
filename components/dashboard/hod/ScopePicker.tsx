@@ -54,12 +54,12 @@ export function ScopePicker({
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: 9,
-          height: 44,
-          padding: "0 14px",
-          borderRadius: 13,
-          background: open ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.6)",
-          border: open ? "1.5px solid rgba(58,99,250,.4)" : "1.5px solid rgba(255,255,255,.75)",
+          gap: 10,
+          height: 50,
+          padding: "0 16px",
+          borderRadius: 16,
+          background: open ? "rgba(255,255,255,.92)" : "rgba(255,255,255,.75)",
+          border: open ? "1.5px solid rgba(58,99,250,.4)" : "1.5px solid rgba(255,255,255,.8)",
           boxShadow: "0 6px 18px rgba(70,100,190,.1)",
           cursor: "pointer",
           position: "relative",
@@ -70,16 +70,16 @@ export function ScopePicker({
       >
         <span
           style={{
-            width: 26,
-            height: 26,
-            borderRadius: 8,
+            width: 28,
+            height: 28,
+            borderRadius: 9,
             background: "linear-gradient(135deg,#3A63FA,#273FF9)",
             flexShrink: 0,
           }}
         />
-        <span style={{ fontSize: 13, fontWeight: 500, color: "#181835", whiteSpace: "nowrap" }}>{selected?.label ?? "All teams"}</span>
-        <span style={{ fontSize: 11, color: "#767FA5", whiteSpace: "nowrap" }}>{selected?.meta}</span>
-        <iconify-icon icon="ant-design:down-outlined" width="12" style={{ color: "#767FA5" }} />
+        <span style={{ fontSize: 15, fontWeight: 500, color: "#181835", whiteSpace: "nowrap" }}>{selected?.label ?? "All teams"}</span>
+        <span style={{ fontSize: 12, color: "#767FA5", whiteSpace: "nowrap" }}>{selected?.meta}</span>
+        <iconify-icon icon="ant-design:down-outlined" width="13" style={{ color: "#767FA5" }} />
       </button>
 
       {open ? (
