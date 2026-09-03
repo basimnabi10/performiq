@@ -9,7 +9,17 @@ import { IconButton } from "@/components/ui/IconButton";
 const METRIC_TYPES = ["number", "percentage", "rating", "currency", "days"] as const;
 const CADENCES = ["weekly", "monthly", "quarterly"] as const;
 
-export function CreateKpiModal({ cycleId, teamId }: { cycleId: string; teamId: string }) {
+export function CreateKpiModal({
+  cycleId,
+  teamId,
+  variant = "primary",
+  size,
+}: {
+  cycleId: string;
+  teamId: string;
+  variant?: "primary" | "secondary";
+  size?: "sm" | "md" | "lg" | "header";
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -31,7 +41,7 @@ export function CreateKpiModal({ cycleId, teamId }: { cycleId: string; teamId: s
 
   if (!open) {
     return (
-      <Button icon="ant-design:plus-outlined" onClick={() => setOpen(true)}>
+      <Button icon="ant-design:plus-outlined" variant={variant} size={size} onClick={() => setOpen(true)}>
         Create KPI
       </Button>
     );

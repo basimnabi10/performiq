@@ -11,10 +11,12 @@ export function StartCycleModal({
   departmentId,
   variant = "primary",
   icon = "ant-design:play-circle-outlined",
+  size,
 }: {
   departmentId?: string;
   variant?: "primary" | "secondary";
   icon?: string;
+  size?: "sm" | "md" | "lg" | "header";
 }) {
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState("");
@@ -27,7 +29,7 @@ export function StartCycleModal({
 
   if (!open) {
     return (
-      <Button variant={variant} icon={icon} onClick={() => setOpen(true)}>
+      <Button variant={variant} icon={icon} size={size} onClick={() => setOpen(true)}>
         Start review cycle
       </Button>
     );

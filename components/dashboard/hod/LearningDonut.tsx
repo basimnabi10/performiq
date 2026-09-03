@@ -12,6 +12,7 @@ export function LearningDonut({
   overdue: number;
 }) {
   const pct = assigned > 0 ? Math.round((completed / assigned) * 100) : 0;
+  const pctDisplay = assigned > 0 ? `${pct}%` : "—";
 
   return (
     <div
@@ -22,21 +23,21 @@ export function LearningDonut({
         WebkitBackdropFilter: "blur(35px)",
         backdropFilter: "blur(35px)",
         boxShadow: "0 8px 24px rgba(0,0,0,.06)",
-        borderRadius: 24,
-        padding: 22,
+        borderRadius: 28,
+        padding: 28,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>Learning overview</span>
-        <Link href="/learning" style={{ fontSize: 13, fontWeight: 500, color: "#273FF9" }}>
+        <span style={{ fontSize: 22, fontWeight: 500, color: "#181835" }}>Learning overview</span>
+        <Link href="/learning" style={{ fontSize: 14, fontWeight: 500, color: "#273FF9" }}>
           Studio
         </Link>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 26, marginTop: 22 }}>
         <div
           style={{
-            width: 112,
-            height: 112,
+            width: 144,
+            height: 144,
             borderRadius: "50%",
             background: `conic-gradient(#273FF9 0 ${pct}%, rgba(168,175,203,.35) ${pct}% 100%)`,
             display: "flex",
@@ -47,8 +48,8 @@ export function LearningDonut({
         >
           <div
             style={{
-              width: 82,
-              height: 82,
+              width: 106,
+              height: 106,
               borderRadius: "50%",
               background: "rgba(255,255,255,.9)",
               display: "flex",
@@ -57,11 +58,11 @@ export function LearningDonut({
               justifyContent: "center",
             }}
           >
-            <span style={{ fontSize: 24, fontWeight: 500, color: "#181835" }}>{pct}%</span>
-            <span style={{ fontSize: 10, color: "#767FA5" }}>complete</span>
+            <span style={{ fontSize: 30, fontWeight: 500, color: "#181835" }}>{pctDisplay}</span>
+            <span style={{ fontSize: 12, color: "#767FA5" }}>complete</span>
           </div>
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 11 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 15 }}>
           {[
             { icon: "ant-design:book-outlined", label: "Assigned", value: assigned, color: "#767FA5" },
             { icon: "ant-design:check-circle-outlined", label: "Completed", value: completed, color: "#273FF9" },
@@ -69,10 +70,10 @@ export function LearningDonut({
             { icon: "ant-design:clock-circle-outlined", label: "Overdue", value: overdue, color: "#767FA5" },
           ].map((row) => (
             <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13, color: "#596392" }}>
-                <iconify-icon icon={row.icon} width="14" style={{ color: row.color, verticalAlign: "-2px" }} /> {row.label}
+              <span style={{ fontSize: 15, color: "#596392" }}>
+                <iconify-icon icon={row.icon} width="16" style={{ color: row.color, verticalAlign: "-3px" }} /> {row.label}
               </span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>{row.value}</span>
+              <span style={{ fontSize: 16, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>{row.value}</span>
             </div>
           ))}
         </div>

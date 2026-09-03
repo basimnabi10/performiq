@@ -29,35 +29,35 @@ export function PeopleHighlightCard({
         WebkitBackdropFilter: "blur(35px)",
         backdropFilter: "blur(35px)",
         boxShadow: "0 8px 24px rgba(0,0,0,.06)",
-        borderRadius: 24,
-        padding: 22,
+        borderRadius: 28,
+        padding: 28,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>{title}</div>
-        <span style={{ fontSize: 13, fontWeight: 500, color: "#273FF9" }}>{actionLabel}</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <div style={{ fontSize: 22, fontWeight: 500, color: "#181835" }}>{title}</div>
+        <span style={{ fontSize: 14, fontWeight: 500, color: "#273FF9" }}>{actionLabel}</span>
       </div>
       {rows.length === 0 ? (
         <div className="piq-caption">{emptyText}</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
           {rows.map((r) => (
             <Link
               key={r.id}
               href={`/members/${r.id}`}
-              style={{ display: "flex", alignItems: "center", gap: 11, textDecoration: "none", color: "inherit" }}
+              style={{ display: "flex", alignItems: "center", gap: 13, textDecoration: "none", color: "inherit" }}
             >
               {r.rank != null ? (
-                <span style={{ width: 22, fontSize: 13, fontWeight: 500, color: "#A8AFCB", fontVariantNumeric: "tabular-nums" }}>
+                <span style={{ width: 24, fontSize: 14, fontWeight: 500, color: "#A8AFCB", fontVariantNumeric: "tabular-nums" }}>
                   {r.rank}
                 </span>
               ) : null}
-              <Avatar name={r.name} size={36} />
+              <Avatar name={r.name} size={40} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>{r.name}</div>
-                <div style={{ fontSize: 11, color: "#767FA5" }}>{r.subtitle}</div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#252944" }}>{r.name}</div>
+                <div style={{ fontSize: 12, color: "#767FA5" }}>{r.subtitle}</div>
               </div>
-              <span style={{ fontSize: 16, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ fontSize: 17, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>
                 {r.score.toFixed(1)}
               </span>
             </Link>

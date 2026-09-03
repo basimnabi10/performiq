@@ -56,32 +56,33 @@ export function TrendPanel({
         WebkitBackdropFilter: "blur(35px)",
         backdropFilter: "blur(35px)",
         boxShadow: "0 8px 24px rgba(0,0,0,.06)",
-        borderRadius: 24,
-        padding: 22,
+        borderRadius: 28,
+        padding: 28,
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>{scopeLabel} performance trend</div>
-          <div style={{ fontSize: 12, color: "#767FA5", marginTop: 2 }}>Average score across recent review cycles</div>
+          <div style={{ fontSize: 22, fontWeight: 500, color: "#181835" }}>{scopeLabel} performance trend</div>
+          <div style={{ fontSize: 14, color: "#767FA5", marginTop: 3 }}>Average score across recent review cycles</div>
         </div>
         <span
           style={{
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: 500,
-            padding: "4px 10px",
-            borderRadius: 8,
+            padding: "6px 13px",
+            borderRadius: 10,
             color: "#273FF9",
             background: "rgba(58,99,250,.13)",
+            whiteSpace: "nowrap",
           }}
         >
           {pillLabel}
         </span>
       </div>
-      <div style={{ position: "relative", height: 200, marginTop: 14 }}>
+      <div style={{ position: "relative", height: 260, marginTop: 20 }}>
         {points.length > 1
           ? coords.map((c, i) => (
               <div
@@ -97,7 +98,7 @@ export function TrendPanel({
               />
             ))
           : null}
-        {last ? (
+        {points.length > 1 && last ? (
           <div
             style={{
               position: "absolute",
@@ -138,7 +139,7 @@ export function TrendPanel({
             Not enough closed cycles yet for a trend line.
           </div>
         )}
-        {last ? (
+        {points.length > 1 && last ? (
           <div
             style={{
               position: "absolute",
@@ -148,9 +149,9 @@ export function TrendPanel({
               background: "#fff",
               boxShadow: "0 8px 20px rgba(37,41,68,.16)",
               border: "1px solid rgba(255,255,255,.9)",
-              borderRadius: 11,
-              padding: "6px 12px",
-              fontSize: 14,
+              borderRadius: 13,
+              padding: "8px 16px",
+              fontSize: 18,
               fontWeight: 500,
               color: "#181835",
               fontVariantNumeric: "tabular-nums",
@@ -161,7 +162,10 @@ export function TrendPanel({
         ) : null}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, display: "flex", justifyContent: "space-between" }}>
           {coords.map((c, i) => (
-            <span key={i} className="piq-caption" style={{ color: i === coords.length - 1 ? "#273FF9" : "#767FA5", fontWeight: i === coords.length - 1 ? 500 : 400 }}>
+            <span
+              key={i}
+              style={{ fontSize: 14, color: i === coords.length - 1 ? "#273FF9" : "#767FA5", fontWeight: i === coords.length - 1 ? 500 : 400 }}
+            >
               {c.label}
             </span>
           ))}

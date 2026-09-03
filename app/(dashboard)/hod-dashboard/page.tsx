@@ -398,28 +398,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#273FF9", boxShadow: "0 0 0 3px rgba(39,63,249,.18)" }} />
             {activeCycle.label} · {daysToEnd} days left
           </span>
-          <StartCycleModal departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined} />
         </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <InviteMemberModal teams={allTeams.map((t) => ({ id: t.id, name: t.name }))} />
-        <StartCycleModal
-          departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
-          variant="secondary"
-          icon="ant-design:reload-outlined"
-        />
-        <Link href="/learning" style={{ textDecoration: "none" }}>
-          <Button variant="secondary" icon="ant-design:read-outlined">
-            Assign learning
-          </Button>
-        </Link>
-        {canCreateKpi ? (
-          <CreateKpiModal cycleId={activeCycle.id} teamId={(selectedTeam ?? teamsToShow[0]).id} />
-        ) : null}
-        <Button variant="secondary" icon="ant-design:download-outlined" disabled>
-          Export report
-        </Button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6,minmax(0,1fr))", gap: 24, alignItems: "stretch" }}>
@@ -439,6 +418,32 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           deltaUp={delta == null || delta >= 0}
           trend={trendPoints}
         />
+
+        <div style={{ gridColumn: "1/-1", display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <InviteMemberModal teams={allTeams.map((t) => ({ id: t.id, name: t.name }))} variant="secondary" size="header" />
+          <StartCycleModal
+            departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
+            variant="secondary"
+            icon="ant-design:reload-outlined"
+            size="header"
+          />
+          <Link href="/learning" style={{ textDecoration: "none" }}>
+            <Button variant="secondary" icon="ant-design:read-outlined" size="header">
+              Assign learning
+            </Button>
+          </Link>
+          {canCreateKpi ? (
+            <CreateKpiModal
+              cycleId={activeCycle.id}
+              teamId={(selectedTeam ?? teamsToShow[0]).id}
+              variant="secondary"
+              size="header"
+            />
+          ) : null}
+          <Button variant="secondary" icon="ant-design:download-outlined" size="header" disabled>
+            Export report
+          </Button>
+        </div>
 
         <div style={{ gridColumn: "span 6", fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
           {overviewTitle}

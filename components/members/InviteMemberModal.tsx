@@ -15,10 +15,14 @@ interface TeamOption {
 export function InviteMemberModal({
   teams,
   simple = false,
+  variant = "primary",
+  size,
 }: {
   teams: TeamOption[];
   /** Team-detail entry point: skip team selection (fixed) and hide the Odoo toggle. */
   simple?: boolean;
+  variant?: "primary" | "secondary";
+  size?: "sm" | "md" | "lg" | "header";
 }) {
   const [open, setOpen] = useState(false);
   const [teamId, setTeamId] = useState(teams[0]?.id ?? "");
@@ -43,7 +47,7 @@ export function InviteMemberModal({
 
   if (!open) {
     return (
-      <Button icon="ant-design:user-add-outlined" onClick={() => setOpen(true)}>
+      <Button icon="ant-design:user-add-outlined" variant={variant} size={size} onClick={() => setOpen(true)}>
         Invite member
       </Button>
     );

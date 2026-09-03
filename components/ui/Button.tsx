@@ -5,8 +5,8 @@ import * as React from "react";
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /** Primary = blue gradient pill; secondary = frosted glass; ghost = outline; text = bare. */
   variant?: "primary" | "secondary" | "ghost" | "text";
-  /** Control height rhythm. sm=40 md=46 lg=52. */
-  size?: "sm" | "md" | "lg";
+  /** Control height rhythm. sm=40 md=44-46 lg=56 header=50 (dashboard header row only). */
+  size?: "sm" | "md" | "lg" | "header";
   /** Iconify icon name shown before the label, e.g. "ant-design:plus-outlined". */
   icon?: string;
   /** Iconify icon name shown after the label. */
@@ -17,13 +17,21 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 // (the header CTA and the frosted quick-action buttons are two different
 // heights/type-sizes by design, not a shared default).
 const MD_METRICS: Record<string, { height: number; padX: number; fontSize: number; gap: number }> = {
+  primary: { height: 44, padX: 20, fontSize: 14, gap: 8 },
+  secondary: { height: 46, padX: 18, fontSize: 13, gap: 9 },
+  ghost: { height: 46, padX: 18, fontSize: 13, gap: 9 },
+  text: { height: 46, padX: 18, fontSize: 13, gap: 9 },
+};
+// Bigger scale used only for the HOD Dashboard header row (per the design
+// reference screenshot) — not the app-wide default.
+const HEADER_METRICS: Record<string, { height: number; padX: number; fontSize: number; gap: number }> = {
   primary: { height: 50, padX: 24, fontSize: 15, gap: 9 },
   secondary: { height: 50, padX: 20, fontSize: 14, gap: 10 },
   ghost: { height: 50, padX: 20, fontSize: 14, gap: 10 },
   text: { height: 50, padX: 20, fontSize: 14, gap: 10 },
 };
 const SM_METRICS = { height: 40, padX: 16, fontSize: 12, gap: 6 };
-const LG_METRICS = { height: 56, padX: 28, fontSize: 16, gap: 10 };
+const LG_METRICS = { height: 52, padX: 24, fontSize: 15, gap: 10 };
 
 const VARIANTS: Record<string, React.CSSProperties> = {
   primary: {
@@ -61,7 +69,14 @@ export function Button({
   style,
   ...rest
 }: ButtonProps) {
-  const m = size === "sm" ? SM_METRICS : size === "lg" ? LG_METRICS : (MD_METRICS[variant] ?? MD_METRICS.secondary);
+  const m =
+    size === "sm"
+      ? SM_METRICS
+      : size === "lg"
+        ? LG_METRICS
+        : size === "header"
+          ? (HEADER_METRICS[variant] ?? HEADER_METRICS.secondary)
+          : (MD_METRICS[variant] ?? MD_METRICS.secondary);
 
   const base: React.CSSProperties = {
     display: "inline-flex",
@@ -70,7 +85,7 @@ export function Button({
     gap: m.gap,
     height: m.height,
     padding: `0 ${m.padX}px`,
-    borderRadius: 16,
+    borderRadius: size === "header" ? 16 : 14,
     border: "none",
     fontFamily: "'Switzer', system-ui, sans-serif",
     fontWeight: 500,
@@ -81,7 +96,7 @@ export function Button({
     whiteSpace: "nowrap",
   };
 
-  const iconWidth = size === "sm" ? 14 : size === "lg" ? 19 : variant === "primary" ? 16 : 18;
+  const iconWidth = size === "sm" ? 14 : size === "lg" || size === "header" ? 18 : variant === "primary" ? 15 : 17;
   const iconColor = variant === "primary" ? undefined : "#273FF9";
 
   return (
