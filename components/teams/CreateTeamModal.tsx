@@ -20,7 +20,12 @@ export function CreateTeamModal({ departments }: { departments: { id: string; na
 
   if (!open) {
     return (
-      <Button icon="ant-design:plus-outlined" onClick={() => setOpen(true)}>
+      <Button
+        icon="ant-design:plus-outlined"
+        variant="secondary"
+        style={{ color: "#273FF9" }}
+        onClick={() => setOpen(true)}
+      >
         New team
       </Button>
     );
