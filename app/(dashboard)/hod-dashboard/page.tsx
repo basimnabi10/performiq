@@ -398,6 +398,10 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#273FF9", boxShadow: "0 0 0 3px rgba(39,63,249,.18)" }} />
             {activeCycle.label} · {daysToEnd} days left
           </span>
+          <StartCycleModal
+            departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
+            size="header"
+          />
         </div>
       </div>
 
