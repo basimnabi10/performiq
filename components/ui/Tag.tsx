@@ -31,7 +31,7 @@ export function Tag({ tone = "neutral", dot = false, children, style, ...rest }:
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        fontFamily: "'Plus Jakarta Sans',sans-serif",
+        fontFamily: "'Switzer',sans-serif",
         fontSize: 12,
         fontWeight: 500,
         color: t.color,

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function LearningDonut({
   assigned,
   completed,
@@ -24,7 +26,12 @@ export function LearningDonut({
         padding: 22,
       }}
     >
-      <div style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>Learning overview</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>Learning overview</span>
+        <Link href="/learning" style={{ fontSize: 13, fontWeight: 500, color: "#273FF9" }}>
+          Studio
+        </Link>
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 16 }}>
         <div
           style={{

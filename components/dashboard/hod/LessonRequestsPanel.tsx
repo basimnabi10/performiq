@@ -71,7 +71,7 @@ export function LessonRequestsPanel({ requests }: { requests: LessonRequestRow[]
                   style={{
                     flex: 1,
                     height: 36,
-                    font: "500 12px 'Plus Jakarta Sans',sans-serif",
+                    font: "500 12px 'Switzer',sans-serif",
                     color: "#fff",
                     background: "linear-gradient(135deg,#3A63FA,#273FF9)",
                     border: "none",
@@ -87,7 +87,7 @@ export function LessonRequestsPanel({ requests }: { requests: LessonRequestRow[]
                   style={{
                     flex: 1,
                     height: 36,
-                    font: "500 12px 'Plus Jakarta Sans',sans-serif",
+                    font: "500 12px 'Switzer',sans-serif",
                     color: "#454D7A",
                     background: "rgba(255,255,255,.7)",
                     border: "1px solid rgba(168,175,203,.4)",

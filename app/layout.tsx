@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { IconifyLoader } from "@/components/ui/IconifyLoader";
 import "./globals.css";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
-  weight: ["400", "500"],
-  subsets: ["latin"],
+const switzer = localFont({
+  variable: "--font-switzer",
+  src: [
+    { path: "./fonts/Switzer-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/Switzer-Medium.woff2", weight: "500", style: "normal" },
+  ],
 });
 
 export const metadata: Metadata = {
@@ -16,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={plusJakartaSans.variable}>
+    <html lang="en" className={switzer.variable}>
       <body>
         <IconifyLoader />
         {children}

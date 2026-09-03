@@ -1,6 +1,34 @@
 import type { TrendPoint } from "./PerformanceBanner";
 
-export function TrendPanel({ points, pillLabel }: { points: TrendPoint[]; pillLabel: string }) {
+// Catmull-Rom -> cubic Bezier conversion so the trend line reads as a smooth
+// curve (matching the design export) instead of straight segments.
+function smoothPath(coords: { x: number; y: number }[]): string {
+  if (coords.length < 2) return "";
+  if (coords.length === 2) return `M${coords[0].x},${coords[0].y} L${coords[1].x},${coords[1].y}`;
+  let d = `M${coords[0].x},${coords[0].y}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i - 1] ?? coords[i];
+    const p1 = coords[i];
+    const p2 = coords[i + 1];
+    const p3 = coords[i + 2] ?? p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+  return d;
+}
+
+export function TrendPanel({
+  points,
+  pillLabel,
+  scopeLabel = "Department",
+}: {
+  points: TrendPoint[];
+  pillLabel: string;
+  scopeLabel?: "Department" | "Team";
+}) {
   const w = 100;
   const h = 100;
   const chartH = 78; // leave 22 for labels
@@ -13,7 +41,7 @@ export function TrendPanel({ points, pillLabel }: { points: TrendPoint[]; pillLa
     const y = chartH - ((p.value - min) / range) * chartH;
     return { x, y, label: p.label, value: p.value };
   });
-  const linePath = coords.map((c, i) => `${i === 0 ? "M" : "L"}${c.x},${c.y}`).join(" ");
+  const linePath = smoothPath(coords);
   const fillPath = coords.length
     ? `${linePath} L${coords[coords.length - 1].x},${h} L${coords[0].x},${h} Z`
     : "";
@@ -34,7 +62,7 @@ export function TrendPanel({ points, pillLabel }: { points: TrendPoint[]; pillLa
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>Performance trend</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>{scopeLabel} performance trend</div>
           <div style={{ fontSize: 12, color: "#767FA5", marginTop: 2 }}>Average score across recent review cycles</div>
         </div>
         <span
@@ -54,6 +82,35 @@ export function TrendPanel({ points, pillLabel }: { points: TrendPoint[]; pillLa
         </span>
       </div>
       <div style={{ position: "relative", height: 200, marginTop: 14 }}>
+        {points.length > 1
+          ? coords.map((c, i) => (
+              <div
+                key={`grid-${i}`}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  bottom: 22,
+                  left: `${(c.x / w) * 100}%`,
+                  width: 1,
+                  background: "rgba(168,175,203,.22)",
+                }}
+              />
+            ))
+          : null}
+        {last ? (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 22,
+              left: `${(last.x / w) * 100}%`,
+              transform: "translateX(-50%)",
+              width: 44,
+              background: "linear-gradient(180deg,rgba(39,63,249,.14),rgba(39,63,249,0))",
+              borderRadius: "16px 16px 0 0",
+            }}
+          />
+        ) : null}
         {points.length > 1 ? (
           <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "calc(100% - 22px)" }}>
             <defs>

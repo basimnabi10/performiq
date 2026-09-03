@@ -52,7 +52,7 @@ export function MoodCheckinWidget({ initialValue }: { initialValue: number | nul
           border: "1px solid rgba(255,255,255,.6)",
           borderRadius: 11,
           padding: "8px 12px",
-          fontFamily: "'Plus Jakarta Sans',sans-serif",
+          fontFamily: "'Switzer',sans-serif",
           fontSize: 13,
           background: "rgba(255,255,255,.45)",
           outline: "none",

@@ -54,7 +54,7 @@ export function SearchField({
           outline: "none",
           background: "transparent",
           width: "100%",
-          fontFamily: "'Plus Jakarta Sans',sans-serif",
+          fontFamily: "'Switzer',sans-serif",
           fontSize: 14,
           fontWeight: 400,
           color: "#252944",

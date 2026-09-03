@@ -91,7 +91,7 @@ const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,.75)",
   borderRadius: 11,
   padding: "10px 14px",
-  fontFamily: "'Plus Jakarta Sans',sans-serif",
+  fontFamily: "'Switzer',sans-serif",
   fontSize: 14,
   background: "rgba(255,255,255,.6)",
   outline: "none",

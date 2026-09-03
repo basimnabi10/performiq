@@ -63,10 +63,8 @@
   --surface-frost-border: rgba(255, 255, 255, 0.4);
   --surface-ink: #181835;
 
-  --bg-gradient: linear-gradient(117deg, #eaefff 42.93%, #8bb0ff 100%);
-
   /* ---- Typography ---- */
-  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Switzer", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --weight-regular: 400;
   --weight-medium: 500;
 
@@ -126,7 +124,7 @@
 @theme inline {
   --color-primary: var(--blue-600);
   --color-accent: var(--lime-200);
-  --font-sans: var(--font-plus-jakarta);
+  --font-sans: var(--font-switzer);
 }
 
 /* Reusable frosted-surface class — the canonical PerformIQ card. */
@@ -185,7 +183,7 @@ body {
 body {
   font-family: var(--font-sans);
   color: var(--text-strong);
-  background-image: var(--bg-gradient), url("/assets/frost-background.png");
+  background-image: url("/assets/frost-background.png");
   background-size: cover;
   background-position: center;
   background-attachment: fixed;

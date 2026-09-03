@@ -48,7 +48,7 @@ export function SegmentedNav({ items = [], value, onChange, style, ...rest }: Se
               cursor: "pointer",
               borderRadius: 11,
               padding: "9px 18px",
-              fontFamily: "'Plus Jakarta Sans',sans-serif",
+              fontFamily: "'Switzer',sans-serif",
               fontSize: 14,
               fontWeight: active ? 500 : 400,
               color: active ? "#fff" : "#596392",

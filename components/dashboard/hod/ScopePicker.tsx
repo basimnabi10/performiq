@@ -54,12 +54,13 @@ export function ScopePicker({
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: 8,
-          height: 46,
+          gap: 9,
+          height: 44,
           padding: "0 14px",
-          borderRadius: 14,
-          background: "rgba(255,255,255,.5)",
-          border: "1px solid rgba(255,255,255,.7)",
+          borderRadius: 13,
+          background: open ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.6)",
+          border: open ? "1.5px solid rgba(58,99,250,.4)" : "1.5px solid rgba(255,255,255,.75)",
+          boxShadow: "0 6px 18px rgba(70,100,190,.1)",
           cursor: "pointer",
           position: "relative",
           zIndex: 41,
@@ -69,11 +70,10 @@ export function ScopePicker({
       >
         <span
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: "#273FF9",
-            boxShadow: "0 0 0 3px rgba(39,63,249,.18)",
+            width: 26,
+            height: 26,
+            borderRadius: 8,
+            background: "linear-gradient(135deg,#3A63FA,#273FF9)",
             flexShrink: 0,
           }}
         />
@@ -87,15 +87,15 @@ export function ScopePicker({
           style={{
             position: "absolute",
             top: "calc(100% + 8px)",
-            left: 0,
-            width: 280,
+            right: 0,
+            width: 308,
             zIndex: 42,
-            background: "rgba(255,255,255,.95)",
-            WebkitBackdropFilter: "blur(30px)",
-            backdropFilter: "blur(30px)",
+            background: "rgba(255,255,255,.96)",
+            WebkitBackdropFilter: "blur(40px)",
+            backdropFilter: "blur(40px)",
             border: "1px solid rgba(255,255,255,.8)",
             borderRadius: 16,
-            boxShadow: "0 20px 50px rgba(24,24,53,.2)",
+            boxShadow: "0 20px 50px rgba(24,24,53,.25)",
           }}
         >
           <div style={{ padding: "12px 12px 8px" }}>
@@ -138,9 +138,10 @@ export function ScopePicker({
                       alignItems: "center",
                       gap: 10,
                       padding: "9px 10px",
-                      borderRadius: 12,
+                      borderRadius: 11,
                       cursor: "pointer",
-                      background: active ? "rgba(39,63,249,.08)" : "transparent",
+                      background: active ? "rgba(58,99,250,.1)" : "transparent",
+                      border: active ? "1px solid rgba(58,99,250,.3)" : "1px solid transparent",
                     }}
                   >
                     <span
@@ -148,8 +149,8 @@ export function ScopePicker({
                         width: 30,
                         height: 30,
                         borderRadius: 9,
-                        background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "rgba(168,175,203,.25)",
-                        color: active ? "#fff" : "#767FA5",
+                        background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "rgba(58,99,250,.12)",
+                        color: active ? "#fff" : "#273FF9",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -167,9 +168,9 @@ export function ScopePicker({
                     {active ? (
                       <span
                         style={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: "50%",
+                          width: 20,
+                          height: 20,
+                          borderRadius: 6,
                           background: "#273FF9",
                           color: "#fff",
                           display: "flex",
@@ -178,7 +179,7 @@ export function ScopePicker({
                           flexShrink: 0,
                         }}
                       >
-                        <iconify-icon icon="ant-design:check-outlined" width="11" />
+                        <iconify-icon icon="ant-design:check-outlined" width="12" />
                       </span>
                     ) : null}
                   </div>

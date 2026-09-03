@@ -4,7 +4,6 @@ import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { createKpi } from "@/actions/kpis";
 import { Button } from "@/components/ui/Button";
-import { FrostCard } from "@/components/ui/FrostCard";
 import { IconButton } from "@/components/ui/IconButton";
 
 const METRIC_TYPES = ["number", "percentage", "rating", "currency", "days"] as const;
@@ -55,14 +54,55 @@ export function CreateKpiModal({ cycleId, teamId }: { cycleId: string; teamId: s
         reset();
       }}
     >
-      <FrostCard
-        tone="solid"
-        style={{ width: 480, display: "flex", flexDirection: "column", gap: 14, maxHeight: "90vh", overflowY: "auto" }}
+      <div
+        style={{
+          width: 640,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          background: "rgba(255,255,255,.9)",
+          WebkitBackdropFilter: "blur(40px)",
+          backdropFilter: "blur(40px)",
+          border: "1px solid rgba(255,255,255,.7)",
+          borderRadius: 26,
+          boxShadow: "0 30px 80px rgba(24,24,53,.4)",
+          padding: 30,
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span className="piq-h3">Create KPI</span>
-          <IconButton icon="ant-design:close-outlined" variant="chrome" size={32} label="Close" onClick={() => setOpen(false)} />
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+          <span
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 14,
+              background: "linear-gradient(135deg,#3A63FA,#273FF9)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              boxShadow: "0 8px 20px rgba(39,63,249,.35)",
+              flexShrink: 0,
+            }}
+          >
+            <iconify-icon icon="ant-design:aim-outlined" width="22" />
+          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: "-.01em", color: "#181835" }}>Create KPI</div>
+            <div style={{ fontSize: 13, color: "#596392", marginTop: 2 }}>
+              Define a metric for your team to track this cycle.
+            </div>
+          </div>
+          <IconButton
+            icon="ant-design:close-outlined"
+            variant="chrome"
+            size={34}
+            label="Close"
+            onClick={() => setOpen(false)}
+            style={{ borderRadius: 10, flexShrink: 0 }}
+          />
         </div>
 
         <form
@@ -88,23 +128,23 @@ export function CreateKpiModal({ cycleId, teamId }: { cycleId: string; teamId: s
           <Field label="Description (optional)">
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} style={inputStyle} />
           </Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Metric type">
-              <select value={metricType} onChange={(e) => setMetricType(e.target.value as typeof metricType)} style={inputStyle}>
-                {METRIC_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Direction">
-              <select value={direction} onChange={(e) => setDirection(e.target.value as typeof direction)} style={inputStyle}>
-                <option value="higher_is_better">Higher is better</option>
-                <option value="lower_is_better">Lower is better</option>
-              </select>
-            </Field>
-          </div>
+          <Field label="Metric type">
+            <SegmentedControl
+              options={METRIC_TYPES.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))}
+              value={metricType}
+              onChange={(v) => setMetricType(v as typeof metricType)}
+            />
+          </Field>
+          <Field label="Direction">
+            <SegmentedControl
+              options={[
+                { value: "higher_is_better", label: "Higher is better" },
+                { value: "lower_is_better", label: "Lower is better" },
+              ]}
+              value={direction}
+              onChange={(v) => setDirection(v as typeof direction)}
+            />
+          </Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Target">
               <input value={targetValue} onChange={(e) => setTargetValue(e.target.value)} required placeholder="e.g. ≥ 4.5" style={inputStyle} />
@@ -115,13 +155,11 @@ export function CreateKpiModal({ cycleId, teamId }: { cycleId: string; teamId: s
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Cadence">
-              <select value={cadence} onChange={(e) => setCadence(e.target.value as typeof cadence)} style={inputStyle}>
-                {CADENCES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              <SegmentedControl
+                options={CADENCES.map((c) => ({ value: c, label: c[0].toUpperCase() + c.slice(1) }))}
+                value={cadence}
+                onChange={(v) => setCadence(v as typeof cadence)}
+              />
             </Field>
             <Field label="Weight in review (%)">
               <input
@@ -142,11 +180,24 @@ export function CreateKpiModal({ cycleId, teamId }: { cycleId: string; teamId: s
             </div>
           ) : null}
 
-          <Button type="submit" disabled={isExecuting} style={{ width: "100%" }}>
-            {isExecuting ? "Creating…" : "Create KPI"}
-          </Button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginTop: 10 }}>
+            <Button
+              type="button"
+              variant="secondary"
+              style={{ color: "#454D7A", background: "rgba(255,255,255,.6)", border: "1px solid rgba(168,175,203,.4)" }}
+              onClick={() => {
+                setOpen(false);
+                reset();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" icon="ant-design:plus-outlined" disabled={isExecuting}>
+              {isExecuting ? "Creating…" : "Create KPI"}
+            </Button>
+          </div>
         </form>
-      </FrostCard>
+      </div>
     </div>
   );
 }
@@ -160,11 +211,53 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function SegmentedControl({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 5, marginTop: 8, padding: 5, background: "rgba(255,255,255,.55)", border: "1px solid rgba(255,255,255,.7)", borderRadius: 13 }}>
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            style={{
+              flex: 1,
+              textAlign: "center",
+              padding: "9px 0",
+              borderRadius: 9,
+              fontSize: 13,
+              fontWeight: 500,
+              fontFamily: "'Switzer',sans-serif",
+              cursor: "pointer",
+              border: "none",
+              whiteSpace: "nowrap",
+              color: active ? "#fff" : "#596392",
+              background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "transparent",
+              boxShadow: active ? "0 5px 14px rgba(39,63,249,.32)" : "none",
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,.75)",
   borderRadius: 11,
   padding: "10px 14px",
-  fontFamily: "'Plus Jakarta Sans',sans-serif",
+  fontFamily: "'Switzer',sans-serif",
   fontSize: 14,
   background: "rgba(255,255,255,.6)",
   outline: "none",

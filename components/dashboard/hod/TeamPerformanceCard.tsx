@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 export function TeamPerformanceCard({
@@ -37,6 +39,15 @@ export function TeamPerformanceCard({
         padding: 22,
         textDecoration: "none",
         color: "inherit",
+        transition: "transform .18s ease, box-shadow .18s ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-3px)";
+        e.currentTarget.style.boxShadow = "0 16px 36px rgba(70,100,190,.16)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "none";
+        e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.06)";
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

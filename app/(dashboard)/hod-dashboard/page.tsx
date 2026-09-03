@@ -251,7 +251,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
   const pendingActions = [
     {
       icon: "ant-design:audit-outlined",
-      title: "Reviews awaiting completion",
+      title: "Reviews awaiting approval",
       badgeLabel: pendingReviews > 0 ? "Action needed" : "All caught up",
       badgeTone: pendingReviews > 0 ? ("neutral" as const) : ("clear" as const),
       count: pendingReviews,
@@ -287,8 +287,8 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
     },
     {
       icon: "ant-design:aim-outlined",
-      title: "KPIs not yet scored",
-      badgeLabel: kpisNeedingUpdate > 0 ? "Due this cycle" : "All scored",
+      title: "KPI updates required",
+      badgeLabel: kpisNeedingUpdate > 0 ? "Due this week" : "All scored",
       badgeTone: kpisNeedingUpdate > 0 ? ("neutral" as const) : ("clear" as const),
       count: kpisNeedingUpdate,
       actionLabel: "Update",
@@ -345,8 +345,14 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
 
   const canCreateKpi = teamsToShow.length > 0;
   const roleViewLabel = actor.authRole === "admin" ? "Admin view" : "Head of Department view";
-  const breadcrumb = actor.authRole === "admin" ? departmentName : `${departmentName} Department`;
-  const overviewTitle = actor.authRole === "admin" ? "Organization overview" : "Department overview";
+  const breadcrumb = actor.authRole === "admin" ? "Organization" : `${departmentName} Department`;
+  const overviewTitle = selectedTeam
+    ? `${selectedTeam.name} overview`
+    : actor.authRole === "admin"
+      ? "Organization overview"
+      : "Department overview";
+  const trendScopeLabel = selectedTeam ? "Team" : "Department";
+  const isDeptWideView = !selectedTeam;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -434,14 +440,14 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
         />
 
         <div style={{ gridColumn: "span 6", fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
-          Department overview
+          {overviewTitle}
         </div>
-        <StatCard label="Overall performance" value={overallAvg != null ? overallAvg.toFixed(1) : "—"} unit="/5" icon="ant-design:rise-outlined" style={{ gridColumn: "span 1" }} />
-        <StatCard label="Review completion" value={`${reviewCompletionPct}%`} icon="ant-design:file-done-outlined" style={{ gridColumn: "span 1" }} />
-        <StatCard label="Learning completion" value={`${learningCompletionPct}%`} icon="ant-design:read-outlined" style={{ gridColumn: "span 1" }} />
-        <StatCard label="Total members" value={members.length} icon="ant-design:team-outlined" style={{ gridColumn: "span 1" }} />
-        <StatCard label="Active review cycle" value={activeCycle.label} icon="ant-design:sync-outlined" style={{ gridColumn: "span 1" }} />
-        <StatCard label="Avg KPI score" value={overallAvg != null ? overallAvg.toFixed(1) : "—"} unit="/5" icon="ant-design:aim-outlined" style={{ gridColumn: "span 1" }} />
+        <StatCard label="Overall performance" value={overallAvg != null ? overallAvg.toFixed(1) : "—"} unit="/5" style={{ gridColumn: "span 1" }} />
+        <StatCard label="Review completion" value={`${reviewCompletionPct}%`} style={{ gridColumn: "span 1" }} />
+        <StatCard label="Learning completion" value={`${learningCompletionPct}%`} style={{ gridColumn: "span 1" }} />
+        <StatCard label="Total members" value={members.length} style={{ gridColumn: "span 1" }} />
+        <StatCard label="Active review cycle" value={activeCycle.label} badge="In progress" style={{ gridColumn: "span 1" }} />
+        <StatCard label="Average KPI score" value={overallAvg != null ? overallAvg.toFixed(1) : "—"} unit="/5" style={{ gridColumn: "span 1" }} />
 
         <div style={{ gridColumn: "1/-1", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
@@ -456,7 +462,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           <TeamPerformanceCard key={tc.teamId} {...tc} />
         ))}
 
-        <TrendPanel points={trendPoints} pillLabel={activeCycle.label} />
+        <TrendPanel points={trendPoints} pillLabel={activeCycle.label} scopeLabel={trendScopeLabel} />
         <LearningDonut assigned={learningTotal} completed={learningCompleted} inProgress={learningInProgress} overdue={learningOverdue} />
 
         <div style={{ gridColumn: "1/-1", fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
@@ -465,13 +471,22 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
         <PeopleHighlightCard title="Top performers" actionLabel="View all" rows={topPerformers} emptyText="No scores yet this cycle." />
         <PeopleHighlightCard title="Needs attention" actionLabel="Plan reviews" rows={needsAttention} emptyText="Nothing flagged." />
 
-        <div style={{ gridColumn: "1/-1", fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
-          Performance by KPI
+        <div style={{ gridColumn: "1/-1", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
+            Performance by KPI
+          </span>
+          <span style={{ fontSize: 12, color: "#767FA5" }}>
+            {selectedTeam ? selectedTeam.name : "All teams"} · ranked by KPI score
+          </span>
         </div>
         <KpiPerformancePanel kpis={kpiPanelEntries} />
 
-        <PendingActionsPanel actions={pendingActions} />
-        <UpcomingDeadlinesPanel deadlines={deadlines} />
+        {isDeptWideView ? (
+          <>
+            <PendingActionsPanel actions={pendingActions} />
+            <UpcomingDeadlinesPanel deadlines={deadlines} />
+          </>
+        ) : null}
 
         <TeamMoodPanel
           checkinCount={moodCheckins.length}
@@ -492,9 +507,11 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           />
         </div>
 
-        <RecentActivityFeed
-          rows={auditLogs.map((a) => ({ id: a.id, actorName: a.actor.name, verb: a.verb, timeAgo: timeAgo(a.createdAt) }))}
-        />
+        {isDeptWideView ? (
+          <RecentActivityFeed
+            rows={auditLogs.map((a) => ({ id: a.id, actorName: a.actor.name, verb: a.verb, timeAgo: timeAgo(a.createdAt) }))}
+          />
+        ) : null}
       </div>
 
       <div className="piq-caption">{courses} published courses available to assign.</div>
