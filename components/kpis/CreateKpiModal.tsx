@@ -8,25 +8,45 @@ import { IconButton } from "@/components/ui/IconButton";
 
 const METRIC_TYPES = ["number", "percentage", "rating", "currency", "days"] as const;
 const CADENCES = ["weekly", "monthly", "quarterly"] as const;
+const UNIT_SYMBOL: Record<(typeof METRIC_TYPES)[number], string> = {
+  number: "#",
+  percentage: "%",
+  rating: "/5",
+  currency: "$",
+  days: "d",
+};
+
+export interface CreateKpiTeamOption {
+  id: string;
+  name: string;
+  memberCount: number;
+  icon: string;
+  gradient: string;
+}
 
 export function CreateKpiModal({
   cycleId,
-  teamId,
+  teams,
+  defaultTeamId,
   variant = "primary",
   size,
 }: {
   cycleId: string;
-  teamId: string;
+  teams: CreateKpiTeamOption[];
+  /** Pre-checked team when the modal opens (e.g. the team-detail page this button lives on). */
+  defaultTeamId?: string;
   variant?: "primary" | "secondary";
   size?: "sm" | "md" | "lg" | "header";
 }) {
   const [open, setOpen] = useState(false);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
+    () => new Set(defaultTeamId ? [defaultTeamId] : teams[0] ? [teams[0].id] : []),
+  );
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [metricType, setMetricType] = useState<(typeof METRIC_TYPES)[number]>("rating");
   const [direction, setDirection] = useState<"higher_is_better" | "lower_is_better">("higher_is_better");
   const [targetValue, setTargetValue] = useState("");
-  const [unit, setUnit] = useState("");
   const [cadence, setCadence] = useState<(typeof CADENCES)[number]>("quarterly");
   const [weightPct, setWeightPct] = useState(20);
 
@@ -38,6 +58,31 @@ export function CreateKpiModal({
       setTargetValue("");
     },
   });
+
+  function toggleTeam(id: string) {
+    setSelectedTeamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const selectedTeamNames = teams.filter((t) => selectedTeamIds.has(t.id)).map((t) => t.name);
+  const teamLabel = selectedTeamNames.length ? selectedTeamNames.join(" and ") : "no team selected";
+  const unit = UNIT_SYMBOL[metricType];
+  const targetLabel = targetValue.trim()
+    ? metricType === "currency"
+      ? `$${targetValue}`
+      : metricType === "percentage"
+        ? `${targetValue}%`
+        : metricType === "rating"
+          ? `${targetValue}/5`
+          : targetValue
+    : "a target";
+  const summary = selectedTeamNames.length
+    ? `${teamLabel} will track "${name.trim() || "this KPI"}" toward ${targetLabel}, measured ${cadence} through the active cycle.`
+    : "Select at least one team to apply this KPI to.";
 
   if (!open) {
     return (
@@ -69,7 +114,7 @@ export function CreateKpiModal({
           width: 640,
           maxHeight: "90vh",
           overflowY: "auto",
-          background: "rgba(255,255,255,.9)",
+          background: "rgba(255,255,255,.86)",
           WebkitBackdropFilter: "blur(40px)",
           backdropFilter: "blur(40px)",
           border: "1px solid rgba(255,255,255,.7)",
@@ -101,9 +146,7 @@ export function CreateKpiModal({
           </span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: "-.01em", color: "#181835" }}>Create KPI</div>
-            <div style={{ fontSize: 13, color: "#596392", marginTop: 2 }}>
-              Define a metric for your team to track this cycle.
-            </div>
+            <div style={{ fontSize: 13, color: "#596392", marginTop: 2 }}>Define a metric for your team to track this cycle.</div>
           </div>
           <IconButton
             icon="ant-design:close-outlined"
@@ -125,18 +168,97 @@ export function CreateKpiModal({
               metricType,
               direction,
               targetValue,
-              unit: unit || undefined,
+              unit,
               cadence,
-              teamWeights: [{ teamId, weightPct }],
+              teamWeights: Array.from(selectedTeamIds).map((teamId) => ({ teamId, weightPct })),
             });
           }}
           style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
+          {teams.length > 0 ? (
+            <div style={{ marginTop: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
+                Apply to teams
+              </div>
+              <div style={{ display: "flex", gap: 12, marginTop: 11, flexWrap: "wrap" }}>
+                {teams.map((t) => {
+                  const active = selectedTeamIds.has(t.id);
+                  return (
+                    <div
+                      key={t.id}
+                      onClick={() => toggleTeam(t.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 11,
+                        padding: 14,
+                        borderRadius: 16,
+                        cursor: "pointer",
+                        flex: "1 1 220px",
+                        background: active ? "rgba(39,63,249,.08)" : "rgba(255,255,255,.5)",
+                        border: `1.5px solid ${active ? "#273FF9" : "rgba(255,255,255,.75)"}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 12,
+                          background: `linear-gradient(135deg,${t.gradient})`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#fff",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <iconify-icon icon={t.icon} width="18" />
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: "#181835" }}>{t.name}</div>
+                        <div style={{ fontSize: 11, color: "#767FA5" }}>{t.memberCount} members</div>
+                      </div>
+                      <span
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#fff",
+                          background: active ? "#273FF9" : "transparent",
+                          border: `1.5px solid ${active ? "#273FF9" : "rgba(168,175,203,.6)"}`,
+                          opacity: active ? 1 : 0.45,
+                        }}
+                      >
+                        <iconify-icon icon="ant-design:check-outlined" width="12" />
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <Field label="KPI name">
-            <input value={name} onChange={(e) => setName(e.target.value)} required style={inputStyle} />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Design review turnaround time"
+              required
+              style={inputStyle}
+            />
           </Field>
           <Field label="Description (optional)">
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} style={inputStyle} />
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What does this KPI measure, and why does it matter this cycle?"
+              rows={2}
+              style={{ ...inputStyle, height: 74, padding: "12px 15px", resize: "none", lineHeight: 1.5 }}
+            />
           </Field>
           <Field label="Metric type">
             <SegmentedControl
@@ -155,23 +277,56 @@ export function CreateKpiModal({
               onChange={(v) => setDirection(v as typeof direction)}
             />
           </Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Target">
-              <input value={targetValue} onChange={(e) => setTargetValue(e.target.value)} required placeholder="e.g. ≥ 4.5" style={inputStyle} />
-            </Field>
-            <Field label="Unit (optional)">
-              <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="e.g. days" style={inputStyle} />
-            </Field>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Cadence">
-              <SegmentedControl
-                options={CADENCES.map((c) => ({ value: c, label: c[0].toUpperCase() + c.slice(1) }))}
-                value={cadence}
-                onChange={(v) => setCadence(v as typeof cadence)}
-              />
-            </Field>
-            <Field label="Weight in review (%)">
+          <div style={{ display: "flex", gap: 16 }}>
+            <div style={{ width: 200 }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Target value</label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginTop: 8,
+                  height: 46,
+                  background: "rgba(255,255,255,.7)",
+                  border: "1.5px solid rgba(168,175,203,.4)",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                }}
+              >
+                <span
+                  style={{
+                    padding: "0 13px",
+                    fontSize: 14,
+                    color: "#767FA5",
+                    borderRight: "1px solid rgba(168,175,203,.35)",
+                    alignSelf: "stretch",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {unit}
+                </span>
+                <input
+                  value={targetValue}
+                  onChange={(e) => setTargetValue(e.target.value)}
+                  placeholder="0"
+                  required
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    height: "100%",
+                    border: "none",
+                    background: "transparent",
+                    padding: "0 13px",
+                    fontSize: 14,
+                    color: "#181835",
+                    fontVariantNumeric: "tabular-nums",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Weight in review (%)</label>
               <input
                 type="number"
                 min={1}
@@ -179,9 +334,32 @@ export function CreateKpiModal({
                 value={weightPct}
                 onChange={(e) => setWeightPct(Number(e.target.value))}
                 required
-                style={inputStyle}
+                style={{ ...inputStyle, marginTop: 8 }}
               />
-            </Field>
+            </div>
+          </div>
+          <Field label="Measurement cadence">
+            <SegmentedControl
+              options={CADENCES.map((c) => ({ value: c, label: c[0].toUpperCase() + c.slice(1) }))}
+              value={cadence}
+              onChange={(v) => setCadence(v as typeof cadence)}
+            />
+          </Field>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 11,
+              marginTop: 10,
+              padding: "14px 16px",
+              background: "rgba(39,63,249,.07)",
+              border: "1px solid rgba(39,63,249,.15)",
+              borderRadius: 14,
+            }}
+          >
+            <iconify-icon icon="ant-design:info-circle-outlined" width="17" style={{ color: "#273FF9", marginTop: 1, flexShrink: 0 }} />
+            <div style={{ fontSize: 13, color: "#454D7A", lineHeight: 1.5 }}>{summary}</div>
           </div>
 
           {result.serverError ? (
@@ -202,7 +380,7 @@ export function CreateKpiModal({
             >
               Cancel
             </Button>
-            <Button type="submit" icon="ant-design:plus-outlined" disabled={isExecuting}>
+            <Button type="submit" icon="ant-design:plus-outlined" disabled={isExecuting || selectedTeamIds.size === 0}>
               {isExecuting ? "Creating…" : "Create KPI"}
             </Button>
           </div>
@@ -264,12 +442,13 @@ function SegmentedControl({
 }
 
 const inputStyle: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,.75)",
-  borderRadius: 11,
-  padding: "10px 14px",
+  border: "1.5px solid rgba(168,175,203,.4)",
+  borderRadius: 12,
+  padding: "0 15px",
+  height: 46,
   fontFamily: "'Switzer',sans-serif",
   fontSize: 14,
-  background: "rgba(255,255,255,.6)",
+  background: "rgba(255,255,255,.7)",
   outline: "none",
   color: "#181835",
   width: "100%",

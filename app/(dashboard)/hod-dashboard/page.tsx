@@ -439,7 +439,14 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           {canCreateKpi ? (
             <CreateKpiModal
               cycleId={activeCycle.id}
-              teamId={(selectedTeam ?? teamsToShow[0]).id}
+              teams={teamsToShow.map((t, i) => ({
+                id: t.id,
+                name: t.name,
+                memberCount: members.filter((m) => m.teamId === t.id).length,
+                gradient: TEAM_GRADIENTS[i % TEAM_GRADIENTS.length],
+                icon: TEAM_ICONS[i % TEAM_ICONS.length],
+              }))}
+              defaultTeamId={selectedTeam?.id}
               variant="secondary"
               size="header"
             />

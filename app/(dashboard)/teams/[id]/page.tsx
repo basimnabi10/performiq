@@ -58,7 +58,10 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
           activeTab === "members" ? (
             <InviteMemberModal teams={[{ id: team.id, name: team.name }]} simple />
           ) : activeCycle ? (
-            <CreateKpiModal cycleId={activeCycle.id} teamId={team.id} />
+            <CreateKpiModal
+              cycleId={activeCycle.id}
+              teams={[{ id: team.id, name: team.name, memberCount: team.members.length, gradient: "8BB0FF,#3A63FA", icon: "ant-design:aim-outlined" }]}
+            />
           ) : null
         ) : null}
       </div>

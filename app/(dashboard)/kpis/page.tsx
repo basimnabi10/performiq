@@ -17,6 +17,7 @@ export default async function KpisPage() {
     orderBy: { name: "asc" },
     include: {
       kpiTeams: { include: { kpi: true }, orderBy: { createdAt: "asc" } },
+      _count: { select: { members: true } },
     },
   });
 
@@ -48,7 +49,12 @@ export default async function KpisPage() {
               <Link href={`/teams/${team.id}?tab=kpis`} className="piq-h3" style={{ textDecoration: "none" }}>
                 {team.name}
               </Link>
-              {activeCycle ? <CreateKpiModal cycleId={activeCycle.id} teamId={team.id} /> : null}
+              {activeCycle ? (
+                <CreateKpiModal
+                  cycleId={activeCycle.id}
+                  teams={[{ id: team.id, name: team.name, memberCount: team._count.members, gradient: "8BB0FF,#3A63FA", icon: "ant-design:aim-outlined" }]}
+                />
+              ) : null}
             </div>
             {activeCycle ? (
               <KpiList
