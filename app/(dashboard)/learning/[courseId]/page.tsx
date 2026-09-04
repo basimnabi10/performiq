@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
@@ -20,35 +19,32 @@ export default async function CoursePage({ params }: PageProps<"/learning/[cours
   });
 
   const canManage = course.ownerId === actor.id || actor.authRole === "admin" || actor.authRole === "hod";
+  // The correct answer is only safe to reveal once the learner has already
+  // submitted their own attempt, or to the course's own author/managers
+  // previewing it — never to a learner who hasn't taken the quiz yet.
+  const revealAnswers = canManage || !!progress?.quizDone;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <Link href="/learning" className="piq-caption" style={{ textDecoration: "none" }}>
-        ← Back to learning
-      </Link>
-
-      <div>
-        <div className="piq-h1">{course.title}</div>
-        <div className="piq-caption">
-          {course.category} · {course.level} · {course.duration}
-        </div>
-      </div>
-
-      <CourseViewer
-        courseId={course.id}
-        videoUrl={course.videoUrl}
-        articleTitle={course.article?.title ?? course.title}
-        articleSubtitle={course.article?.subtitle ?? null}
-        articleBody={course.article?.bodyMarkdown ?? ""}
-        questions={toLearnerSafeQuiz(course.questions)}
-        progress={{
-          videoDone: progress?.videoDone ?? false,
-          readingDone: progress?.readingDone ?? false,
-          quizDone: progress?.quizDone ?? false,
-          quizScore: progress?.quizScore ?? null,
-        }}
-        canManage={canManage}
-      />
-    </div>
+    <CourseViewer
+      courseId={course.id}
+      category={course.category ?? "General"}
+      title={course.title}
+      level={course.level}
+      duration={course.duration ?? "—"}
+      videoUrl={course.videoUrl}
+      summary={course.summary ?? ""}
+      articleTitle={course.article?.title ?? course.title}
+      articleSubtitle={course.article?.subtitle ?? null}
+      articleBody={course.article?.bodyMarkdown ?? ""}
+      questions={revealAnswers ? course.questions : toLearnerSafeQuiz(course.questions)}
+      revealAnswers={revealAnswers}
+      progress={{
+        videoDone: progress?.videoDone ?? false,
+        readingDone: progress?.readingDone ?? false,
+        quizDone: progress?.quizDone ?? false,
+        quizScore: progress?.quizScore ?? null,
+      }}
+      canManage={canManage}
+    />
   );
 }
