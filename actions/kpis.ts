@@ -5,7 +5,7 @@ import { authActionClient } from "@/lib/safe-action";
 import { requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { assertWeightBudget } from "@/lib/kpi-weight";
-import { createKpiSchema, updateKpiTeamWeightSchema } from "@/lib/validation/kpis.schema";
+import { createKpiSchema, createTeamKpiSchema, updateKpiTeamWeightSchema } from "@/lib/validation/kpis.schema";
 
 export const createKpi = authActionClient
   .schema(createKpiSchema)
@@ -64,6 +64,67 @@ export const createKpi = authActionClient
     }
 
     return { kpiId: kpi.id };
+  });
+
+// Single-team creation with inline weight-budget editing — the KPIs page's
+// richer modal lets the user re-allocate existing weights on the same team
+// while adding a new KPI, committed atomically in one transaction.
+export const createTeamKpi = authActionClient
+  .schema(createTeamKpiSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const team = await prisma.team.findUnique({ where: { id: parsedInput.teamId } });
+    if (!team) throw new Error("Team not found.");
+    await requireScopeAccess(actor, { teamId: team.id });
+
+    const editIds = parsedInput.weightEdits.map((e) => e.kpiTeamId);
+    if (editIds.length) {
+      const rows = await prisma.kpiTeam.findMany({ where: { id: { in: editIds }, teamId: team.id } });
+      if (rows.length !== editIds.length) {
+        throw new Error("One or more KPI weights could not be found on this team.");
+      }
+    }
+
+    const kpi = await prisma.$transaction(async (tx) => {
+      for (const edit of parsedInput.weightEdits) {
+        await tx.kpiTeam.update({ where: { id: edit.kpiTeamId }, data: { weightPct: edit.weightPct } });
+      }
+
+      await assertWeightBudget(tx, {
+        teamId: team.id,
+        cycleId: parsedInput.cycleId,
+        addWeight: parsedInput.weightPct,
+      });
+
+      const created = await tx.kpi.create({
+        data: {
+          orgId: actor.orgId,
+          cycleId: parsedInput.cycleId,
+          ownerId: actor.id,
+          name: parsedInput.name,
+          description: parsedInput.detail,
+          metricType: parsedInput.metricType,
+          direction: parsedInput.direction,
+          targetValue: parsedInput.targetValue,
+          unit: parsedInput.unit,
+          cadence: "quarterly",
+          status: "new",
+        },
+      });
+
+      await tx.kpiTeam.create({
+        data: { kpiId: created.id, teamId: team.id, weightPct: parsedInput.weightPct },
+      });
+
+      return created;
+    });
+
+    revalidatePath("/kpis");
+    revalidatePath(`/teams/${team.id}`);
+
+    return { kpiId: kpi.id, name: parsedInput.name, weightPct: parsedInput.weightPct };
   });
 
 export const updateKpiTeamWeight = authActionClient
