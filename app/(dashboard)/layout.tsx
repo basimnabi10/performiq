@@ -19,7 +19,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     throw e;
   }
 
-  const [department, team] = await Promise.all([
+  const [organization, department, team] = await Promise.all([
+    prisma.organization.findUnique({ where: { id: member.orgId }, select: { name: true } }),
     member.departmentId
       ? prisma.department.findUnique({ where: { id: member.departmentId }, select: { name: true } })
       : Promise.resolve(null),
@@ -49,6 +50,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             { href: "/learning", label: "Learning", icon: "ant-design:read-outlined" },
           ],
         },
+        ...(member.authRole === "admin"
+          ? [{ label: "Admin", items: [{ href: "/settings", label: "Settings", icon: "ant-design:setting-outlined" }] }]
+          : []),
       ]
     : member.authRole === "manager"
       ? [
@@ -88,7 +92,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar
-        orgName="Acme Inc · Pro"
+        orgName={organization?.name ?? "PerformIQ"}
         workspaceLabel={workspaceLabel}
         workspaceSub={workspaceSub}
         workspaceIcon={workspaceIcon}
