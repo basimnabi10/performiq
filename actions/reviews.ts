@@ -6,7 +6,7 @@ import { AuthzError, requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { completeReview } from "@/lib/scoring";
 import { logActivity } from "@/lib/audit";
-import { assignReviewerSchema, saveReviewSchema } from "@/lib/validation/reviews.schema";
+import { assignReviewerSchema, saveReviewSchema, startReviewSchema } from "@/lib/validation/reviews.schema";
 
 async function upsertKpiScores(
   reviewId: string,
@@ -125,4 +125,48 @@ export const assignReviewer = authActionClient
     });
 
     revalidatePath("/reviews");
+  });
+
+/**
+ * Manually starts a single review shell (self/manager/peer) in a cycle —
+ * for cases the cycle's own auto-generated shells don't cover, e.g. someone
+ * who joined after the cycle started, or a manager change. `assignReviewer`
+ * above stays peer-only for the existing peer-assignment flow; this covers
+ * the general case from the Reviews page's "Start review" action.
+ */
+export const startReview = authActionClient
+  .schema(startReviewSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod", "manager"]);
+
+    const reviewee = await prisma.member.findUnique({ where: { id: parsedInput.revieweeId } });
+    if (!reviewee) throw new Error("Member not found.");
+    await requireScopeAccess(actor, { teamId: reviewee.teamId, departmentId: reviewee.departmentId });
+
+    // A self-review's reviewer is always the reviewee themself — never trust
+    // a client-supplied reviewerId for this type.
+    const reviewerId = parsedInput.type === "self" ? reviewee.id : parsedInput.reviewerId;
+
+    const review = await prisma.review.upsert({
+      where: {
+        cycleId_revieweeId_reviewerId_type: {
+          cycleId: parsedInput.cycleId,
+          revieweeId: parsedInput.revieweeId,
+          reviewerId,
+          type: parsedInput.type,
+        },
+      },
+      create: {
+        cycleId: parsedInput.cycleId,
+        revieweeId: parsedInput.revieweeId,
+        reviewerId,
+        type: parsedInput.type,
+        status: "pending",
+      },
+      update: {},
+    });
+
+    revalidatePath("/reviews");
+    return { reviewId: review.id };
   });

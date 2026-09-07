@@ -42,14 +42,19 @@ export function ReviewsFilterBar({
             e.preventDefault();
             pushWith({ q: q || null });
           }}
-          style={{ flex: "1 1 220px", minWidth: 200 }}
+          style={{ position: "relative", flex: "1 1 220px", minWidth: 200 }}
         >
+          <iconify-icon
+            icon="ant-design:search-outlined"
+            width={15}
+            style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", color: "#A8AFCB", pointerEvents: "none" }}
+          />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onBlur={() => pushWith({ q: q || null })}
-            placeholder="Search by member name…"
-            style={inputStyle}
+            placeholder="Search member name…"
+            style={{ ...inputStyle, paddingLeft: 38 }}
           />
         </form>
 
@@ -79,29 +84,41 @@ export function ReviewsFilterBar({
         </select>
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {SCORE_CHIPS.map((chip) => {
-          const active = activeScore === chip.value;
-          return (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() => pushWith({ minScore: chip.value || null })}
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                padding: "7px 13px",
-                borderRadius: 9,
-                border: "none",
-                cursor: "pointer",
-                color: active ? "#fff" : "#596392",
-                background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "rgba(255,255,255,.5)",
-              }}
-            >
-              {chip.label}
-            </button>
-          );
-        })}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {SCORE_CHIPS.map((chip) => {
+            const active = activeScore === chip.value;
+            return (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => pushWith({ minScore: chip.value || null })}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  padding: "7px 13px",
+                  borderRadius: 9,
+                  border: "none",
+                  cursor: "pointer",
+                  color: active ? "#fff" : "#596392",
+                  background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "rgba(255,255,255,.5)",
+                }}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <select
+          value={searchParams.get("sort") ?? "recent"}
+          onChange={(e) => pushWith({ sort: e.target.value === "recent" ? null : e.target.value })}
+          style={selectStyle}
+        >
+          <option value="recent">Sort: Most recent</option>
+          <option value="score_desc">Sort: Score (high to low)</option>
+          <option value="score_asc">Sort: Score (low to high)</option>
+        </select>
       </div>
     </div>
   );

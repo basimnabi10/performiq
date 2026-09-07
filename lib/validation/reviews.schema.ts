@@ -16,3 +16,10 @@ export const assignReviewerSchema = z.object({
   revieweeId: z.string().min(1),
   reviewerId: z.string().min(1),
 });
+
+export const startReviewSchema = z.object({
+  cycleId: z.string().min(1),
+  revieweeId: z.string().min(1),
+  reviewerId: z.string().min(1),
+  type: z.enum(["self", "manager", "peer"]),
+});
