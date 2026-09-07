@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
 import { StartCycleModal } from "@/components/cycles/StartCycleModal";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { CloseCycleModal } from "@/components/cycles/CloseCycleModal";
 import { CreateKpiModal } from "@/components/kpis/CreateKpiModal";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
@@ -78,13 +79,43 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
   ]);
 
   if (!activeCycle) {
+    // Setting up from scratch has an order to it: a cycle with no teams or
+    // people in it generates no reviews and shows nothing, so point at the
+    // missing step rather than offering a cycle that would come up empty.
+    const memberCount = await prisma.member.count({
+      where: actor.authRole === "admin" ? { orgId: actor.orgId } : { departmentId: actor.departmentId ?? "" },
+    });
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div className="piq-h1">{departmentName}</div>
-        <div className="piq-caption">
-          No review cycle is active yet.
-        </div>
-        <StartCycleModal departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined} />
+        {allTeams.length === 0 ? (
+          <EmptyState
+            icon="ant-design:team-outlined"
+            title="Let's set up your organization"
+            body="Nothing is tracked yet. Start by adding a department in Settings and creating a team — then invite people, and start a review cycle for them."
+            actionHref="/settings"
+            actionLabel="Go to Settings"
+          />
+        ) : memberCount <= 1 ? (
+          <EmptyState
+            icon="ant-design:user-add-outlined"
+            title="Invite your team"
+            body="You have a team but nobody in it yet. Invite people first — starting a review cycle now would create no reviews."
+            actionHref="/members"
+            actionLabel="Invite members"
+          />
+        ) : (
+          <>
+            <EmptyState
+              icon="ant-design:play-circle-outlined"
+              title="No review cycle is active"
+              body="Start a cycle to generate self- and manager-review shells for everyone in scope. KPIs are then created against that cycle."
+            />
+            <div>
+              <StartCycleModal departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined} />
+            </div>
+          </>
+        )}
       </div>
     );
   }

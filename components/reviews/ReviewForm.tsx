@@ -37,10 +37,15 @@ export function ReviewForm({
   reviewId,
   kpis,
   readOnly,
+  readOnlyReason,
 }: {
   reviewId: string;
   kpis: ReviewFormKpi[];
   readOnly: boolean;
+  /** Why the form can't be edited — without this a read-only form just looks
+   * broken: the rating buttons silently do nothing and the submit button is
+   * gone, with no explanation of either. */
+  readOnlyReason?: string;
 }) {
   const [ratings, setRatings] = useState<Record<string, number>>(
     Object.fromEntries(kpis.map((k) => [k.kpiId, k.initialRating ?? 0])),
@@ -83,6 +88,23 @@ export function ReviewForm({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {readOnly && readOnlyReason ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "13px 16px",
+            background: "rgba(89,99,146,.10)",
+            border: "1px solid rgba(168,175,203,.4)",
+            borderRadius: 14,
+          }}
+        >
+          <iconify-icon icon="ant-design:lock-outlined" width={16} style={{ color: "#596392", flexShrink: 0 }} />
+          <div style={{ fontSize: 13, color: "#454D7A", lineHeight: 1.5 }}>{readOnlyReason}</div>
+        </div>
+      ) : null}
+
       {kpis.map((k) => (
         <FrostCard key={k.kpiId} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -121,8 +143,9 @@ export function ReviewForm({
                   height: 36,
                   borderRadius: "50%",
                   border: "none",
-                  cursor: readOnly ? "default" : "pointer",
+                  cursor: readOnly ? "not-allowed" : "pointer",
                   fontWeight: 500,
+                  opacity: readOnly ? 0.55 : 1,
                   background:
                     (ratings[k.kpiId] ?? 0) >= n
                       ? "linear-gradient(135deg,#3A63FA,#273FF9)"

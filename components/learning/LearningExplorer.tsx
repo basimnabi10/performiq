@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { AssignLearningModal, type AssignCourseOption, type AssignMemberOption, type AssignTeamOption } from "@/components/learning/AssignLearningModal";
 
 export interface CourseRow {
@@ -84,7 +85,15 @@ export function LearningExplorer({
         <TabButton active={tab === "assignments"} icon="ant-design:solution-outlined" label="Assignments" onClick={() => setTab("assignments")} />
       </div>
 
-      {tab === "catalog" ? (
+      {tab === "catalog" && courses.length === 0 ? (
+        <EmptyState
+          icon="ant-design:read-outlined"
+          title="No courses yet"
+          body="Publish your first course and it becomes assignable to anyone on a team. Members can also request to teach one from their own dashboard."
+        />
+      ) : null}
+
+      {tab === "catalog" && courses.length > 0 ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {courses.map((c) => {
             const pct = c.assigned ? Math.round((c.completed / c.assigned) * 100) : 0;

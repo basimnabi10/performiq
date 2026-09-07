@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { findActiveCycle } from "@/lib/cycles";
 import { TeamCard } from "@/components/teams/TeamCard";
 import { CreateTeamModal } from "@/components/teams/CreateTeamModal";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const TEAM_GRADIENTS = ["8BB0FF,#3A63FA", "A8AFCB,#596392", "C8CBE1,#6262A8", "B8BED6,#767FA5"];
 const TEAM_SHADOWS = ["rgba(58,99,250,.3)", "rgba(89,99,146,.3)", "rgba(98,98,168,.3)", "rgba(118,127,165,.3)"];
@@ -70,8 +71,22 @@ export default async function TeamsPage() {
             {activeCycle ? ` · ${activeCycle.label} cycle` : ""}
           </div>
         </div>
-        {canCreate ? <CreateTeamModal departments={departments} /> : null}
+        {canCreate && departments.length > 0 ? <CreateTeamModal departments={departments} /> : null}
       </div>
+
+      {teams.length === 0 ? (
+        <EmptyState
+          icon="ant-design:team-outlined"
+          title="No teams yet"
+          body={
+            departments.length === 0
+              ? "Teams live inside a department. Add your first department in Settings, then come back here to create a team."
+              : "Create your first team, then invite people into it. Everything else — KPIs, reviews, scores — hangs off teams."
+          }
+          actionHref={departments.length === 0 ? "/settings" : undefined}
+          actionLabel={departments.length === 0 ? "Go to Settings" : undefined}
+        />
+      ) : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
         {teams.map((team, i) => {

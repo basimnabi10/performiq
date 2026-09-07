@@ -2,6 +2,7 @@ import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { findActiveCycle } from "@/lib/cycles";
 import { FrostCard } from "@/components/ui/FrostCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { MembersTable } from "@/components/members/MembersTable";
 import { TeamFilterTabs } from "@/components/members/TeamFilterTabs";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
@@ -79,13 +80,23 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
             {members.length} people{activeCycle ? ` · ${activeCycle.label} cycle` : ""}
           </div>
         </div>
-        {canInvite ? <InviteMemberModal teams={teams} /> : null}
+        {canInvite && teams.length > 0 ? <InviteMemberModal teams={teams} /> : null}
       </div>
 
-      <TeamFilterTabs options={filterOptions} activeId={teamFilter} basePath="/members" />
+      {teams.length === 0 ? (
+        <EmptyState
+          icon="ant-design:user-outlined"
+          title="No teams to invite into yet"
+          body="People are invited into a team, so create one first — then invites, reviews and KPI scores all attach to the right place."
+          actionHref="/teams"
+          actionLabel="Go to Teams"
+        />
+      ) : (
+        <>
+          <TeamFilterTabs options={filterOptions} activeId={teamFilter} basePath="/members" />
 
-      <FrostCard>
-        <MembersTable
+          <FrostCard>
+            <MembersTable
           rows={members.map((m) => {
             const scores = scoreByMember.get(m.id);
             return {
@@ -97,9 +108,11 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
               reviewStatus: reviewStatusFor(m.id, m.status),
               kpiScore: scores?.length ? scores.reduce((s, v) => s + v, 0) / scores.length : null,
             };
-          })}
-        />
-      </FrostCard>
+              })}
+            />
+          </FrostCard>
+        </>
+      )}
     </div>
   );
 }

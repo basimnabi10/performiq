@@ -31,6 +31,13 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
   if (!isReviewer && !canViewOnly) notFound();
 
   const readOnly = !isReviewer || review.status === "completed";
+  const readOnlyReason = !readOnly
+    ? undefined
+    : review.status === "completed"
+      ? `This review was submitted${review.submittedAt ? ` on ${review.submittedAt.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}` : ""}, so its scores are locked. Its result already counts toward ${review.reviewee.name}'s cycle score.`
+      : `Only ${review.reviewer.name} can score this review — you have view access as ${
+          actor.authRole === "admin" ? "an admin" : actor.authRole === "hod" ? "the department head" : "the team manager"
+        }.`;
 
   const kpiTeams = review.reviewee.teamId
     ? await prisma.kpiTeam.findMany({
@@ -79,7 +86,7 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
           before scoring this review.
         </div>
       ) : (
-        <ReviewForm reviewId={review.id} kpis={kpis} readOnly={readOnly} />
+        <ReviewForm reviewId={review.id} kpis={kpis} readOnly={readOnly} readOnlyReason={readOnlyReason} />
       )}
     </div>
   );
