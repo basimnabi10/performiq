@@ -19,27 +19,37 @@ const TYPE_OPTIONS = [
   { value: "peer", label: "Peer review" },
 ] as const;
 
-export function StartReviewModal({ cycleId, members }: { cycleId: string; members: MemberOption[] }) {
+export function StartReviewModal({
+  cycleId,
+  members,
+  actorId,
+}: {
+  cycleId: string;
+  members: MemberOption[];
+  /** The person clicking "Start review" — defaults the reviewer to them, since
+   * that's who's most likely conducting it (an admin/HOD/manager reviewing a
+   * direct report themselves), rather than an arbitrary or wrong member. */
+  actorId: string;
+}) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]["value"]>("manager");
-  const [revieweeId, setRevieweeId] = useState(members[0]?.id ?? "");
-  const [reviewerId, setReviewerId] = useState(members[1]?.id ?? members[0]?.id ?? "");
+  const firstReviewee = members.find((m) => m.id !== actorId)?.id ?? members[0]?.id ?? "";
+  const [revieweeId, setRevieweeId] = useState(firstReviewee);
+  const [reviewerId, setReviewerId] = useState(actorId || members[0]?.id || "");
 
   const { execute, isExecuting, result, reset } = useAction(startReview, { onSuccess: () => setOpen(false) });
 
   const reviewee = members.find((m) => m.id === revieweeId);
-  const defaultManagerId = reviewee?.managerId ?? "";
 
   function selectReviewee(id: string) {
     setRevieweeId(id);
-    const m = members.find((x) => x.id === id);
-    if (type === "manager" && m?.managerId) setReviewerId(m.managerId);
+    if (type === "self") setReviewerId(id);
   }
 
   function selectType(t: (typeof TYPE_OPTIONS)[number]["value"]) {
     setType(t);
     if (t === "self") setReviewerId(revieweeId);
-    else if (t === "manager" && defaultManagerId) setReviewerId(defaultManagerId);
+    else setReviewerId(actorId || members[0]?.id || "");
   }
 
   if (!open) {
@@ -111,11 +121,11 @@ export function StartReviewModal({ cycleId, members }: { cycleId: string; member
           </label>
           {type !== "self" ? (
             <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              Reviewer
+              Reviewer {reviewerId === actorId ? "(defaults to you)" : ""}
               <select value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} style={inputStyle}>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name}
+                    {m.id === actorId ? `${m.name} (you)` : m.name}
                   </option>
                 ))}
               </select>

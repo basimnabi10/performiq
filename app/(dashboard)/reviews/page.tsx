@@ -116,7 +116,7 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/reviews"
         {activeCycle && canManage ? (
           <div style={{ display: "flex", gap: 10 }}>
             {scopedMembers.length > 1 ? <AssignReviewerModal cycleId={activeCycle.id} members={scopedMembers} /> : null}
-            <StartReviewModal cycleId={activeCycle.id} members={scopedMembers} />
+            <StartReviewModal cycleId={activeCycle.id} members={scopedMembers} actorId={actor.id} />
           </div>
         ) : null}
       </div>
