@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
 import { StartCycleModal } from "@/components/cycles/StartCycleModal";
+import { CloseCycleModal } from "@/components/cycles/CloseCycleModal";
 import { CreateKpiModal } from "@/components/kpis/CreateKpiModal";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
 import { PerformanceBanner } from "@/components/dashboard/hod/PerformanceBanner";
@@ -398,6 +399,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#273FF9", boxShadow: "0 0 0 3px rgba(39,63,249,.18)" }} />
             {activeCycle.label} · {daysToEnd} days left
           </span>
+          <CloseCycleModal cycleId={activeCycle.id} cycleLabel={activeCycle.label} size="header" />
           <StartCycleModal
             departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
             size="header"

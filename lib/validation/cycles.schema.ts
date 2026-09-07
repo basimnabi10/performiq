@@ -6,3 +6,7 @@ export const startReviewCycleSchema = z.object({
   startDate: z.string().min(1),
   endDate: z.string().min(1),
 });
+
+export const closeReviewCycleSchema = z.object({
+  cycleId: z.string().min(1),
+});

@@ -5,7 +5,7 @@ import { authActionClient } from "@/lib/safe-action";
 import { requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/audit";
-import { startReviewCycleSchema } from "@/lib/validation/cycles.schema";
+import { closeReviewCycleSchema, startReviewCycleSchema } from "@/lib/validation/cycles.schema";
 
 /**
  * Opens a review cycle and generates review shells for every member in
@@ -22,6 +22,21 @@ export const startReviewCycle = authActionClient
       await requireScopeAccess(actor, { departmentId: parsedInput.departmentId });
     } else if (actor.authRole !== "admin") {
       throw new Error("Only an admin can start an organization-wide cycle.");
+    }
+
+    // Match the exact scope the dashboard itself uses to resolve "the"
+    // active cycle (see hod-dashboard's cycleScopeWhere) — without this,
+    // starting a new cycle while one is already active silently creates two
+    // concurrent "in_progress" cycles, which every page's "find the active
+    // cycle" query then resolves inconsistently.
+    const existingActive = await prisma.reviewCycle.findFirst({
+      where:
+        actor.authRole === "admin"
+          ? { orgId: actor.orgId, status: "in_progress" }
+          : { orgId: actor.orgId, departmentId: actor.departmentId, status: "in_progress" },
+    });
+    if (existingActive) {
+      throw new Error(`${existingActive.label} is already in progress. Close it before starting a new cycle.`);
     }
 
     const cycle = await prisma.reviewCycle.create({
@@ -77,4 +92,39 @@ export const startReviewCycle = authActionClient
     revalidatePath("/my-dashboard");
 
     return { cycleId: cycle.id };
+  });
+
+/**
+ * Closes an active review cycle so a new one can be started in its scope.
+ * Doesn't touch its reviews/scores — they stay exactly as they are, just
+ * frozen under a "closed" cycle for history (see the Reviews/Analytics
+ * pages, which already read closed cycles for trend history).
+ */
+export const closeReviewCycle = authActionClient
+  .schema(closeReviewCycleSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const cycle = await prisma.reviewCycle.findUnique({ where: { id: parsedInput.cycleId } });
+    if (!cycle || cycle.orgId !== actor.orgId) throw new Error("Cycle not found.");
+    await requireScopeAccess(actor, { departmentId: cycle.departmentId ?? undefined });
+    if (cycle.status !== "in_progress") throw new Error("This cycle isn't in progress.");
+
+    await prisma.reviewCycle.update({ where: { id: cycle.id }, data: { status: "closed" } });
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: "closed a review cycle",
+      targetType: "ReviewCycle",
+      targetId: cycle.id,
+      metadata: { label: cycle.label },
+    });
+
+    revalidatePath("/reviews");
+    revalidatePath("/hod-dashboard");
+    revalidatePath("/my-dashboard");
+    revalidatePath("/analytics");
+    revalidatePath("/kpis");
   });
