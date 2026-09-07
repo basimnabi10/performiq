@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { findActiveCycle } from "@/lib/cycles";
 import type { Prisma, ReviewStatus } from "@/lib/generated/prisma/client";
 import { FrostCard } from "@/components/ui/FrostCard";
 import { StatCard } from "@/components/ui/StatCard";
@@ -36,13 +37,7 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/reviews"
         ? { reviewee: { departmentId: actor.departmentId } }
         : { reviewee: { teamId: actor.teamId } };
 
-  const activeCycle = await prisma.reviewCycle.findFirst({
-    where:
-      actor.authRole === "admin"
-        ? { orgId: actor.orgId, status: "in_progress" }
-        : { orgId: actor.orgId, status: "in_progress", departmentId: actor.departmentId },
-    orderBy: { startDate: "desc" },
-  });
+  const activeCycle = await findActiveCycle(actor);
 
   const orderBy: Prisma.ReviewOrderByWithRelationInput =
     sort === "score_desc" ? { overallScore: "desc" } : sort === "score_asc" ? { overallScore: "asc" } : { createdAt: "desc" };

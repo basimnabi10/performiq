@@ -22,8 +22,18 @@ const REVIEW_STATUS_STYLE: Record<ReviewStatusKind, { label: string; color: stri
 };
 
 const GRID_COLUMNS = "1fr 190px 160px 110px 40px";
+const GRID_COLUMNS_NO_TEAM = "1fr 200px 130px 120px 44px";
 
-export function MembersTable({ rows }: { rows: MembersTableRow[] }) {
+export function MembersTable({
+  rows,
+  /** Team-detail pages already say which team you're on — the per-row team
+   * pill is pure noise there, so the column collapses to a plain role. */
+  showTeam = true,
+}: {
+  rows: MembersTableRow[];
+  showTeam?: boolean;
+}) {
+  const grid = showTeam ? GRID_COLUMNS : GRID_COLUMNS_NO_TEAM;
   if (rows.length === 0) {
     return <div className="piq-caption">No members match these filters.</div>;
   }
@@ -34,7 +44,7 @@ export function MembersTable({ rows }: { rows: MembersTableRow[] }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: GRID_COLUMNS,
+            gridTemplateColumns: grid,
             gap: 16,
             padding: "0 20px 10px",
             fontSize: 11,
@@ -45,7 +55,7 @@ export function MembersTable({ rows }: { rows: MembersTableRow[] }) {
           }}
         >
           <div>Member</div>
-          <div>Team &amp; role</div>
+          <div>{showTeam ? "Team & role" : "Role"}</div>
           <div>Review status</div>
           <div>KPI score</div>
           <div />
@@ -60,7 +70,7 @@ export function MembersTable({ rows }: { rows: MembersTableRow[] }) {
                 href={`/members/${m.id}`}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: GRID_COLUMNS,
+                  gridTemplateColumns: grid,
                   gap: 16,
                   alignItems: "center",
                   padding: "16px 20px",
@@ -79,22 +89,26 @@ export function MembersTable({ rows }: { rows: MembersTableRow[] }) {
                   </div>
                 </div>
 
-                <div>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      fontSize: 11,
-                      fontWeight: 500,
-                      padding: "3px 9px",
-                      borderRadius: 7,
-                      color: m.teamName === "Product Design" ? "#273FF9" : "#596392",
-                      background: m.teamName === "Product Design" ? "rgba(58,99,250,.13)" : "rgba(89,99,146,.14)",
-                    }}
-                  >
-                    {m.teamName ?? "Unassigned"}
-                  </span>
-                  <div style={{ fontSize: 12, color: "#767FA5", marginTop: 4 }}>{m.jobTitle ?? "—"}</div>
-                </div>
+                {showTeam ? (
+                  <div>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        fontSize: 11,
+                        fontWeight: 500,
+                        padding: "3px 9px",
+                        borderRadius: 7,
+                        color: m.teamName === "Product Design" ? "#273FF9" : "#596392",
+                        background: m.teamName === "Product Design" ? "rgba(58,99,250,.13)" : "rgba(89,99,146,.14)",
+                      }}
+                    >
+                      {m.teamName ?? "Unassigned"}
+                    </span>
+                    <div style={{ fontSize: 12, color: "#767FA5", marginTop: 4 }}>{m.jobTitle ?? "—"}</div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, color: "#454D7A" }}>{m.jobTitle ?? "—"}</div>
+                )}
 
                 <div>
                   <span style={{ display: "inline-flex", fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 8, color: status.color, background: status.bg }}>
@@ -109,7 +123,9 @@ export function MembersTable({ rows }: { rows: MembersTableRow[] }) {
                       <span style={{ fontSize: 12, color: "#A8AFCB" }}>/5</span>
                     </>
                   ) : (
-                    "—"
+                    <>
+                      —<span style={{ fontSize: 12, color: "#A8AFCB" }}> pending</span>
+                    </>
                   )}
                 </div>
 

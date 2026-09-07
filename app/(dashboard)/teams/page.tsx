@@ -1,5 +1,6 @@
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { findActiveCycle } from "@/lib/cycles";
 import { TeamCard } from "@/components/teams/TeamCard";
 import { CreateTeamModal } from "@/components/teams/CreateTeamModal";
 
@@ -33,12 +34,7 @@ export default async function TeamsPage() {
       },
     }),
     prisma.department.findMany({ where: { orgId: actor.orgId }, select: { id: true, name: true } }),
-    prisma.reviewCycle.findFirst({
-      where: isOrgWide
-        ? { orgId: actor.orgId, status: "in_progress" }
-        : { orgId: actor.orgId, departmentId: actor.departmentId, status: "in_progress" },
-      orderBy: { startDate: "desc" },
-    }),
+    findActiveCycle(actor),
   ]);
 
   const allMemberIds = teams.flatMap((t) => t.members.map((m) => m.id));

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentMember, requireSelfOrRole } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { departmentCycleWhere, findActiveCycleForDepartment } from "@/lib/cycles";
 import { DesignationModal } from "@/components/members/DesignationModal";
 import { MemberHero } from "@/components/members/MemberHero";
 import { MemberTrendChart } from "@/components/members/MemberTrendChart";
@@ -33,11 +34,11 @@ export default async function MemberProfilePage({ params }: PageProps<"/members/
 
   const [activeCycle, cycleHistory] = member.departmentId
     ? await Promise.all([
-        prisma.reviewCycle.findFirst({
-          where: { departmentId: member.departmentId, status: "in_progress" },
-          orderBy: { startDate: "desc" },
+        findActiveCycleForDepartment(actor.orgId, member.departmentId),
+        prisma.reviewCycle.findMany({
+          where: departmentCycleWhere(actor.orgId, member.departmentId),
+          orderBy: { startDate: "asc" },
         }),
-        prisma.reviewCycle.findMany({ where: { departmentId: member.departmentId }, orderBy: { startDate: "asc" } }),
       ])
     : [null, []];
 

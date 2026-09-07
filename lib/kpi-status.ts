@@ -29,6 +29,44 @@ export function isKpiScoreOnTarget(score: number, kpi: KpiTargetInfo): boolean {
 }
 
 /**
+ * On/below target for a KPI's actual recorded measurement — unlike
+ * `isKpiScoreOnTarget` (which judges a 1-5 review rating), this compares
+ * like with like: the recorded value and the target are both in the KPI's
+ * own real-world unit, so the comparison is exact whatever the metric type.
+ * Returns null when nobody has recorded a value (or no target is set), which
+ * renders as "Not measured" rather than a guessed status.
+ */
+export function kpiMeasurementStatus(
+  currentNumeric: number | { toString(): string } | null | undefined,
+  kpi: KpiTargetInfo,
+): "on" | "below" | null {
+  if (currentNumeric == null || kpi.targetNumeric == null) return null;
+  const current = Number(currentNumeric);
+  const target = Number(kpi.targetNumeric);
+  const meets = kpi.direction === "lower_is_better" ? current <= target : current >= target;
+  return meets ? "on" : "below";
+}
+
+/**
+ * Formats a recorded measurement for display in the KPI's own unit, mirroring
+ * how `targetValue` is stored ("93%", "2.4 days", "4.6/5").
+ */
+export function formatKpiMeasurement(value: number, metricType: KpiTargetInfo["metricType"]): string {
+  switch (metricType) {
+    case "percentage":
+      return `${value}%`;
+    case "rating":
+      return `${value}/5`;
+    case "currency":
+      return `$${value}`;
+    case "days":
+      return `${value} days`;
+    default:
+      return String(value);
+  }
+}
+
+/**
  * Average target for a "target" reference line on a chart of 1-5 scores.
  * Only rating-type KPIs have a target expressed on that same scale —
  * averaging in a percentage/days/currency/number target would silently mix

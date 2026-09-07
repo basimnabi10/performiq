@@ -2,15 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { findActiveCycle } from "@/lib/cycles";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
 import { TeamKpiCreateModal } from "@/components/kpis/TeamKpiCreateModal";
 import { METRIC_ICON } from "@/components/kpis/TeamKpiCreateModal";
-
-const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  on: { label: "On target", color: "#273FF9", bg: "rgba(58,99,250,.13)" },
-  below: { label: "Below target", color: "#596392", bg: "rgba(89,99,146,.14)" },
-  new: { label: "New", color: "#273FF9", bg: "rgba(58,99,250,.13)" },
-};
+import { KpiCurrentCell } from "@/components/kpis/KpiCurrentCell";
+import { kpiMeasurementStatus } from "@/lib/kpi-status";
 
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const actor = await getCurrentMember();
@@ -32,12 +29,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     include: { _count: { select: { members: true } } },
   });
 
-  const activeCycle = await prisma.reviewCycle.findFirst({
-    where: isOrgWide
-      ? { orgId: actor.orgId, status: "in_progress" }
-      : { orgId: actor.orgId, departmentId: actor.departmentId, status: "in_progress" },
-    orderBy: { startDate: "desc" },
-  });
+  const activeCycle = await findActiveCycle(actor);
 
   if (teams.length === 0) {
     return (
@@ -70,9 +62,9 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const kpiRows = kpiTeams.map((kt) => {
     const scores = memberKpiScores.filter((s) => s.kpiId === kt.kpiId);
     const avgScore = scores.length ? scores.reduce((s, r) => s + Number(r.score), 0) / scores.length : null;
-    const status = STATUS_STYLE[kt.kpi.status] ?? STATUS_STYLE.new;
     return {
       kpiTeamId: kt.id,
+      kpiId: kt.kpiId,
       name: kt.kpi.name,
       icon: METRIC_ICON[kt.kpi.metricType as keyof typeof METRIC_ICON] ?? "ant-design:aim-outlined",
       quantifier:
@@ -82,9 +74,12 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       unit: kt.kpi.unit ?? kt.kpi.metricType,
       weightPct: kt.weightPct,
       avgScore,
-      statusLabel: status.label,
-      statusColor: status.color,
-      statusBg: status.bg,
+      currentValue: kt.kpi.currentValue,
+      currentNumeric: kt.kpi.currentNumeric != null ? String(kt.kpi.currentNumeric) : null,
+      // Derived from the recorded measurement vs the target (same unit), not
+      // from Kpi.status, which is only a creation-time default and never moves.
+      measurementStatus: kpiMeasurementStatus(kt.kpi.currentNumeric, kt.kpi),
+      hasTarget: kt.kpi.targetNumeric != null,
     };
   });
 
@@ -93,7 +88,8 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const weightOfScored = scoredRows.reduce((s, r) => s + r.weightPct, 0);
   const teamScore = weightOfScored ? weightedSum / weightOfScored : null;
   const totalWeight = kpiTeams.reduce((s, kt) => s + kt.weightPct, 0);
-  const onTargetCount = kpiTeams.filter((kt) => kt.kpi.status === "on").length;
+  const measuredRows = kpiRows.filter((r) => r.measurementStatus != null);
+  const onTargetCount = measuredRows.filter((r) => r.measurementStatus === "on").length;
   const cadenceCounts = new Map<string, number>();
   for (const kt of kpiTeams) cadenceCounts.set(kt.kpi.cadence, (cadenceCounts.get(kt.kpi.cadence) ?? 0) + 1);
   const topCadence = Array.from(cadenceCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0];
@@ -164,7 +160,10 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           <div style={{ display: "flex", gap: 16 }}>
             <SummaryCard label="Team KPI score" value={teamScore != null ? teamScore.toFixed(1) : "—"} unit="/5" />
             <SummaryCard label="Total weight" value={`${totalWeight}%`} />
-            <SummaryCard label="On / above target" value={`${onTargetCount} of ${kpiTeams.length}`} />
+            <SummaryCard
+              label="On / above target"
+              value={measuredRows.length ? `${onTargetCount} of ${measuredRows.length}` : "—"}
+            />
             <SummaryCard label="Cadence" value={cadenceLabel} />
           </div>
 
@@ -259,23 +258,14 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
                     <div style={{ fontSize: 16, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>{row.target}</div>
                     <div style={{ fontSize: 11, color: "#767FA5" }}>{row.unit}</div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>—</div>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        fontSize: 11,
-                        fontWeight: 500,
-                        padding: "2px 7px",
-                        borderRadius: 6,
-                        marginTop: 3,
-                        color: row.statusColor,
-                        background: row.statusBg,
-                      }}
-                    >
-                      {row.statusLabel}
-                    </span>
-                  </div>
+                  <KpiCurrentCell
+                    kpiId={row.kpiId}
+                    currentValue={row.currentValue}
+                    currentNumeric={row.currentNumeric}
+                    status={row.measurementStatus}
+                    hasTarget={row.hasTarget}
+                    canEdit={canManage}
+                  />
                   <div style={{ fontSize: 15, fontWeight: 500, color: "#454D7A", fontVariantNumeric: "tabular-nums" }}>{row.weightPct}%</div>
                   <div style={{ textAlign: "right" }}>
                     <span style={{ fontSize: 20, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>

@@ -24,6 +24,17 @@ export const updateKpiTeamWeightSchema = z.object({
   weightPct: z.number().int().min(1).max(100),
 });
 
+// Records the KPI's actual measured value for this cycle, in the KPI's own
+// real-world unit. An empty string clears it back to "not measured".
+export const updateKpiCurrentSchema = z.object({
+  kpiId: z.string().min(1),
+  currentValue: z
+    .string()
+    .trim()
+    .max(20)
+    .refine((v) => v === "" || !Number.isNaN(Number(v)), { error: "Enter a number." }),
+});
+
 // Single-team KPI creation with inline weight-budget editing (the team KPI
 // tab's richer modal) — separate from createKpiSchema's multi-team flow so
 // the weight-budget re-allocation can be committed atomically alongside the

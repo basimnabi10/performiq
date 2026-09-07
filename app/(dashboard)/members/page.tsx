@@ -1,5 +1,6 @@
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { findActiveCycle } from "@/lib/cycles";
 import { FrostCard } from "@/components/ui/FrostCard";
 import { MembersTable } from "@/components/members/MembersTable";
 import { TeamFilterTabs } from "@/components/members/TeamFilterTabs";
@@ -25,10 +26,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
     include: { team: { select: { name: true } } },
   });
 
-  const activeCycle = await prisma.reviewCycle.findFirst({
-    where: { orgId: actor.orgId, status: "in_progress" },
-    orderBy: { startDate: "desc" },
-  });
+  const activeCycle = await findActiveCycle(actor);
 
   const memberIds = members.map((m) => m.id);
   const [manageReviews, kpiScores] = activeCycle

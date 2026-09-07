@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { cycleScopeWhere } from "@/lib/cycles";
 import { StatCard } from "@/components/ui/StatCard";
 import { TeamSelect } from "@/components/analytics/TeamSelect";
 import { AnalyticsTrendChart } from "@/components/analytics/AnalyticsTrendChart";
@@ -9,7 +10,7 @@ import { KpiPerformanceTable } from "@/components/analytics/KpiPerformanceTable"
 import { BiggestMoversPanel } from "@/components/analytics/BiggestMoversPanel";
 import { LeadersByKpiPanel } from "@/components/analytics/LeadersByKpiPanel";
 import { MemberKpiHeatmap } from "@/components/analytics/MemberKpiHeatmap";
-import { averageRatingScaleTarget } from "@/lib/kpi-status";
+import { averageRatingScaleTarget, kpiMeasurementStatus } from "@/lib/kpi-status";
 
 const BUCKET_DEFS = [
   { label: "Exceptional · 4.5–5.0", min: 4.5, max: 5.01, color: "#273FF9" },
@@ -44,11 +45,11 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
         ? [selectedTeam.id]
         : allowedTeams.map((t) => t.id);
 
-  const cycleScopeWhere = actor.authRole === "admin" ? { orgId: actor.orgId } : { orgId: actor.orgId, departmentId: actor.departmentId };
+  const scopeWhere = cycleScopeWhere(actor);
 
   const [cycle, cycleHistory] = await Promise.all([
-    prisma.reviewCycle.findFirst({ where: { ...cycleScopeWhere, status: "in_progress" }, orderBy: { startDate: "desc" } }),
-    prisma.reviewCycle.findMany({ where: cycleScopeWhere, orderBy: { startDate: "asc" } }),
+    prisma.reviewCycle.findFirst({ where: { ...scopeWhere, status: "in_progress" }, orderBy: { startDate: "desc" } }),
+    prisma.reviewCycle.findMany({ where: scopeWhere, orderBy: { startDate: "asc" } }),
   ]);
 
   if (!cycle || scopeTeamIds.length === 0) {
@@ -99,7 +100,9 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
 
   const scoredAverages = Array.from(memberAverages.values());
   const overallScore = scoredAverages.length ? scoredAverages.reduce((s, v) => s + v, 0) / scoredAverages.length : null;
-  const kpisOnTarget = kpis.filter((kt) => kt.kpi.status === "on").length;
+  // Derived from recorded measurements, not the never-updated Kpi.status enum.
+  const measuredKpis = kpis.filter((kt) => kpiMeasurementStatus(kt.kpi.currentNumeric, kt.kpi) != null);
+  const kpisOnTarget = measuredKpis.filter((kt) => kpiMeasurementStatus(kt.kpi.currentNumeric, kt.kpi) === "on").length;
   const belowFour = scoredAverages.filter((v) => v < 4).length;
   const scoredKpis = kpis.filter((kt) => kpiAverages.has(kt.kpiId));
   const kpiWeightedAvg = scoredKpis.length
@@ -271,7 +274,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
           trendDir={scoreDelta != null && scoreDelta < 0 ? "down" : "up"}
         />
         <StatCard label="KPI weighted average" value={kpiWeightedAvg != null ? kpiWeightedAvg.toFixed(1) : "—"} unit="/ 5" icon="ant-design:aim-outlined" />
-        <StatCard label="KPIs on target" value={`${kpisOnTarget} of ${kpis.length}`} icon="ant-design:check-circle-outlined" />
+        <StatCard label="KPIs on target" value={measuredKpis.length ? `${kpisOnTarget} of ${measuredKpis.length}` : "—"} icon="ant-design:check-circle-outlined" />
         <StatCard label="People below 4.0" value={String(belowFour)} icon="ant-design:warning-outlined" />
       </div>
 

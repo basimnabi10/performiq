@@ -17,12 +17,15 @@ export function InviteMemberModal({
   simple = false,
   variant = "primary",
   size,
+  kpiCount,
 }: {
   teams: TeamOption[];
   /** Team-detail entry point: skip team selection (fixed) and hide the Odoo toggle. */
   simple?: boolean;
   variant?: "primary" | "secondary";
   size?: "sm" | "md" | "lg" | "header";
+  /** Team-detail entry point: spells out what the invitee inherits on joining. */
+  kpiCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [teamId, setTeamId] = useState(teams[0]?.id ?? "");
@@ -136,7 +139,24 @@ export function InviteMemberModal({
             }}
             style={{ display: "flex", flexDirection: "column", gap: 14 }}
           >
-            {simple ? null : (
+            {simple ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  padding: "11px 14px",
+                  background: "rgba(58,99,250,.08)",
+                  border: "1px solid rgba(58,99,250,.15)",
+                  borderRadius: 12,
+                }}
+              >
+                <iconify-icon icon="ant-design:team-outlined" width={16} style={{ color: "#273FF9" }} />
+                <span style={{ fontSize: 13, color: "#454D7A" }}>
+                  Inviting to <span style={{ fontWeight: 500, color: "#181835" }}>{teams[0]?.name}</span>
+                </span>
+              </div>
+            ) : (
               <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 Team
                 <select value={teamId} onChange={(e) => setTeamId(e.target.value)} style={selectStyle} required>
@@ -184,7 +204,11 @@ export function InviteMemberModal({
                 <div style={{ display: "flex", gap: 10, padding: "13px 15px", background: "rgba(39,63,249,.07)", border: "1px solid rgba(39,63,249,.15)", borderRadius: 13 }}>
                   <iconify-icon icon="ant-design:mail-outlined" width={16} style={{ color: "#273FF9", flexShrink: 0, marginTop: 1 }} />
                   <div style={{ fontSize: 12, color: "#454D7A", lineHeight: 1.5 }}>
-                    An invite link is emailed to this address. When they accept, they log in and complete their own profile.
+                    An invite link is emailed to this address. When they accept, they log in and complete their own
+                    profile
+                    {simple && kpiCount != null
+                      ? `, and inherit this team's ${kpiCount} KPI${kpiCount === 1 ? "" : "s"} on their next review form.`
+                      : "."}
                   </div>
                 </div>
               </>
@@ -304,9 +328,18 @@ export function InviteMemberModal({
               </div>
             ) : null}
 
-            <Button type="submit" disabled={invite.isExecuting || (mode === "odoo" && !fetched)} style={{ width: "100%" }}>
-              {invite.isExecuting ? "Sending invite…" : "Send invite"}
-            </Button>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+              <Button type="button" variant="secondary" onClick={close}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                icon="ant-design:send-outlined"
+                disabled={invite.isExecuting || (mode === "odoo" && !fetched)}
+              >
+                {invite.isExecuting ? "Sending invite…" : "Send invite link"}
+              </Button>
+            </div>
           </form>
         )}
       </FrostCard>

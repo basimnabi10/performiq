@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { cycleScopeWhere } from "@/lib/cycles";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
@@ -69,12 +70,11 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
       ? "Organization"
       : (await prisma.department.findUnique({ where: { id: actor.departmentId ?? "" }, select: { name: true } }))?.name ?? "Department";
 
-  const cycleScopeWhere =
-    actor.authRole === "admin" ? { orgId: actor.orgId } : { orgId: actor.orgId, departmentId: actor.departmentId };
+  const scopeWhere = cycleScopeWhere(actor);
 
   const [activeCycle, cycleHistory] = await Promise.all([
-    prisma.reviewCycle.findFirst({ where: { ...cycleScopeWhere, status: "in_progress" }, orderBy: { startDate: "desc" } }),
-    prisma.reviewCycle.findMany({ where: cycleScopeWhere, orderBy: { startDate: "asc" } }),
+    prisma.reviewCycle.findFirst({ where: { ...scopeWhere, status: "in_progress" }, orderBy: { startDate: "desc" } }),
+    prisma.reviewCycle.findMany({ where: scopeWhere, orderBy: { startDate: "asc" } }),
   ]);
 
   if (!activeCycle) {

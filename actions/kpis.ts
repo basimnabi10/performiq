@@ -2,10 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { authActionClient } from "@/lib/safe-action";
-import { requireRole, requireScopeAccess } from "@/lib/authz";
+import { AuthzError, requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { assertWeightBudget } from "@/lib/kpi-weight";
-import { createKpiSchema, createTeamKpiSchema, updateKpiTeamWeightSchema } from "@/lib/validation/kpis.schema";
+import { formatKpiMeasurement } from "@/lib/kpi-status";
+import {
+  createKpiSchema,
+  createTeamKpiSchema,
+  updateKpiCurrentSchema,
+  updateKpiTeamWeightSchema,
+} from "@/lib/validation/kpis.schema";
 
 export const createKpi = authActionClient
   .schema(createKpiSchema)
@@ -154,4 +160,50 @@ export const updateKpiTeamWeight = authActionClient
     });
 
     revalidatePath(`/teams/${kpiTeam.teamId}`);
+  });
+
+/**
+ * Records the KPI's actual measured value for this cycle (e.g. "93" for a
+ * "≥ 90%" KPI). Nothing in the app can observe these real-world numbers, so
+ * they're entered by hand in the KPI manager — this is what makes the
+ * "Current" column and its on/below-target badge real rather than blank.
+ */
+export const updateKpiCurrent = authActionClient
+  .schema(updateKpiCurrentSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const kpi = await prisma.kpi.findUnique({
+      where: { id: parsedInput.kpiId },
+      include: { kpiTeams: { select: { teamId: true } } },
+    });
+    if (!kpi || kpi.orgId !== actor.orgId) throw new Error("KPI not found.");
+    // A KPI can span teams — the actor needs access to at least one of them.
+    let allowed = actor.authRole === "admin";
+    for (const kt of kpi.kpiTeams) {
+      if (allowed) break;
+      try {
+        await requireScopeAccess(actor, { teamId: kt.teamId });
+        allowed = true;
+      } catch {
+        // try the next team this KPI applies to
+      }
+    }
+    if (!allowed) throw new AuthzError("This KPI is outside your scope.");
+
+    const cleared = parsedInput.currentValue === "";
+    const numeric = cleared ? null : Number(parsedInput.currentValue);
+
+    await prisma.kpi.update({
+      where: { id: kpi.id },
+      data: {
+        currentValue: cleared ? null : formatKpiMeasurement(numeric as number, kpi.metricType),
+        currentNumeric: numeric,
+        currentUpdatedAt: cleared ? null : new Date(),
+      },
+    });
+
+    revalidatePath("/kpis");
+    for (const kt of kpi.kpiTeams) revalidatePath(`/teams/${kt.teamId}`);
   });

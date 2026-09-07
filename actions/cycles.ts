@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { authActionClient } from "@/lib/safe-action";
 import { requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { findActiveCycle } from "@/lib/cycles";
 import { logActivity } from "@/lib/audit";
 import { closeReviewCycleSchema, startReviewCycleSchema } from "@/lib/validation/cycles.schema";
 
@@ -29,12 +30,7 @@ export const startReviewCycle = authActionClient
     // starting a new cycle while one is already active silently creates two
     // concurrent "in_progress" cycles, which every page's "find the active
     // cycle" query then resolves inconsistently.
-    const existingActive = await prisma.reviewCycle.findFirst({
-      where:
-        actor.authRole === "admin"
-          ? { orgId: actor.orgId, status: "in_progress" }
-          : { orgId: actor.orgId, departmentId: actor.departmentId, status: "in_progress" },
-    });
+    const existingActive = await findActiveCycle(actor);
     if (existingActive) {
       throw new Error(`${existingActive.label} is already in progress. Close it before starting a new cycle.`);
     }

@@ -332,6 +332,16 @@ model Kpi {
   cadence       KpiCadence    @default(quarterly)
   status        KpiStatus     @default(new)
 
+  // The KPI's actual measured value this cycle, in the KPI's own real-world
+  // unit (93 for a "≥ 90%" KPI, 2.4 for a "≤ 2.0 days" one) — recorded by a
+  // human in the KPI manager, since nothing in the app can observe it.
+  // Distinct from MemberKpiScore, which is the 1-5 review rating. Null until
+  // someone records it, and on/below target is derived from it rather than
+  // from the `status` column above, which is only a creation-time default.
+  currentValue     String? // display string, e.g. "93%"
+  currentNumeric   Decimal? @db.Decimal(10, 2)
+  currentUpdatedAt DateTime?
+
   kpiTeams     KpiTeam[]
   reviewScores ReviewKpiScore[]
   memberScores MemberKpiScore[]
