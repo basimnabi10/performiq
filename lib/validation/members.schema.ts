@@ -13,6 +13,10 @@ export const inviteMemberSchema = z.discriminatedUnion("mode", [
   }),
 ]);
 
+export const lookupOdooEmployeeSchema = z.object({
+  lookupTerm: z.string().min(1, { error: "Enter an email or employee ID." }),
+});
+
 export const updateDesignationSchema = z.object({
   memberId: z.string().min(1),
   jobTitle: z.string().trim().min(2, { error: "Enter a title." }).max(80),

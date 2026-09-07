@@ -5,10 +5,24 @@ import { authActionClient } from "@/lib/safe-action";
 import { requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { odooLookup } from "@/lib/integrations/odoo";
+import { odooLookup, odooSuggestions } from "@/lib/integrations/odoo";
 import { checkRateLimit, inviteRateLimit } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/audit";
-import { inviteMemberSchema, updateDesignationSchema } from "@/lib/validation/members.schema";
+import { inviteMemberSchema, lookupOdooEmployeeSchema, updateDesignationSchema } from "@/lib/validation/members.schema";
+
+export const lookupOdooEmployee = authActionClient
+  .schema(lookupOdooEmployeeSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    requireRole(ctx.member, ["admin", "hod"]);
+    const employee = await odooLookup(parsedInput.lookupTerm);
+    if (!employee) throw new Error("No matching Odoo employee found.");
+    return employee;
+  });
+
+export const listOdooSuggestions = authActionClient.action(async ({ ctx }) => {
+  requireRole(ctx.member, ["admin", "hod"]);
+  return odooSuggestions();
+});
 
 export const inviteMember = authActionClient
   .schema(inviteMemberSchema)

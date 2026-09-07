@@ -27,7 +27,7 @@ export function TrendPanel({
 }: {
   points: TrendPoint[];
   pillLabel: string;
-  scopeLabel?: "Department" | "Team";
+  scopeLabel?: string;
 }) {
   const w = 100;
   const h = 100;

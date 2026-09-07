@@ -32,6 +32,34 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
     orderBy: { startDate: "desc" },
   });
 
+  const memberIds = team.members.map((m) => m.id);
+  const [manageReviews, kpiScores] = activeCycle
+    ? await Promise.all([
+        prisma.review.findMany({
+          where: { cycleId: activeCycle.id, revieweeId: { in: memberIds }, type: "manager" },
+          select: { revieweeId: true, status: true },
+        }),
+        prisma.memberKpiScore.findMany({
+          where: { cycleId: activeCycle.id, memberId: { in: memberIds } },
+          select: { memberId: true, score: true },
+        }),
+      ])
+    : [[], []];
+  const reviewByMember = new Map(manageReviews.map((r) => [r.revieweeId, r.status]));
+  const scoreByMember = new Map<string, number[]>();
+  for (const s of kpiScores) {
+    scoreByMember.set(s.memberId, [...(scoreByMember.get(s.memberId) ?? []), Number(s.score)]);
+  }
+  const cycleOverdue = activeCycle ? new Date() > activeCycle.endDate : false;
+  function reviewStatusFor(memberId: string, status: string): "reviewed" | "in_progress" | "overdue" | "not_started" | "invited" {
+    if (status === "invited") return "invited";
+    if (!activeCycle) return "not_started";
+    const reviewStatus = reviewByMember.get(memberId);
+    if (reviewStatus === "completed") return "reviewed";
+    if (!reviewStatus) return "not_started";
+    return cycleOverdue ? "overdue" : "in_progress";
+  }
+
   const activeTab = tab === "kpis" ? "kpis" : "members";
   // Invite/create-KPI are admin/hod-only actions (see actions/members.ts,
   // actions/kpis.ts) — managers get team-scoped visibility here, not these
@@ -92,14 +120,18 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
       <FrostCard>
         {activeTab === "members" ? (
           <MembersTable
-            rows={team.members.map((m) => ({
-              id: m.id,
-              name: m.name,
-              email: m.email,
-              jobTitle: m.jobTitle,
-              teamName: m.team?.name ?? null,
-              status: m.status,
-            }))}
+            rows={team.members.map((m) => {
+              const scores = scoreByMember.get(m.id);
+              return {
+                id: m.id,
+                name: m.name,
+                email: m.email,
+                jobTitle: m.jobTitle,
+                teamName: m.team?.name ?? null,
+                reviewStatus: reviewStatusFor(m.id, m.status),
+                kpiScore: scores?.length ? scores.reduce((s, v) => s + v, 0) / scores.length : null,
+              };
+            })}
           />
         ) : activeCycle ? (
           <KpiList

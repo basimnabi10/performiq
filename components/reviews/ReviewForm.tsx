@@ -13,9 +13,18 @@ export interface ReviewFormKpi {
   targetValue: string;
   unit: string | null;
   weightPct: number;
+  metricType: "number" | "percentage" | "rating" | "currency" | "days";
   initialRating: number | null;
   initialComment: string | null;
 }
+
+const METRIC_ICON: Record<ReviewFormKpi["metricType"], string> = {
+  rating: "ant-design:star-outlined",
+  percentage: "ant-design:pie-chart-outlined",
+  days: "ant-design:clock-circle-outlined",
+  number: "ant-design:bar-chart-outlined",
+  currency: "ant-design:dollar-outlined",
+};
 
 const BANDS = [
   { min: 4.5, label: "Exceeds expectations" },
@@ -76,8 +85,25 @@ export function ReviewForm({
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {kpis.map((k) => (
         <FrostCard key={k.kpiId} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 15, fontWeight: 500 }}>{k.name}</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: "rgba(58,99,250,.12)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#273FF9",
+                  flexShrink: 0,
+                }}
+              >
+                <iconify-icon icon={METRIC_ICON[k.metricType]} width={16} />
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>{k.name}</span>
+            </div>
             <span className="piq-caption">
               Weight {k.weightPct}% · Target {k.targetValue} {k.unit ?? ""}
             </span>

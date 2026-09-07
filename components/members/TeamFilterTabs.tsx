@@ -4,6 +4,7 @@ export interface TeamFilterOption {
   id: string;
   label: string;
   count: number;
+  icon?: string;
 }
 
 export function TeamFilterTabs({
@@ -34,7 +35,8 @@ export function TeamFilterTabs({
               textDecoration: "none",
             }}
           >
-            {opt.label} · {opt.count}
+            {opt.icon ? <iconify-icon icon={opt.icon} width={15} style={{ marginRight: 6, verticalAlign: -2 }} /> : null}
+            {opt.label} <span style={{ opacity: 0.7 }}>{opt.count}</span>
           </Link>
         );
       })}
