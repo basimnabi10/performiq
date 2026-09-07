@@ -9,6 +9,7 @@ import { KpiPerformanceTable } from "@/components/analytics/KpiPerformanceTable"
 import { BiggestMoversPanel } from "@/components/analytics/BiggestMoversPanel";
 import { LeadersByKpiPanel } from "@/components/analytics/LeadersByKpiPanel";
 import { MemberKpiHeatmap } from "@/components/analytics/MemberKpiHeatmap";
+import { averageRatingScaleTarget } from "@/lib/kpi-status";
 
 const BUCKET_DEFS = [
   { label: "Exceptional · 4.5–5.0", min: 4.5, max: 5.01, color: "#273FF9" },
@@ -145,10 +146,10 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
     quarterly: { points: trendPoints },
     annual: { points: annualPoints, unavailableNote: "Not enough closed cycles yet for a yearly trend." },
   };
-  const avgTarget = kpis.length
-    ? kpis.reduce((s, kt) => s + (kt.kpi.targetNumeric != null ? Number(kt.kpi.targetNumeric) : 0), 0) /
-      kpis.filter((kt) => kt.kpi.targetNumeric != null).length
-    : null;
+  // Only rating-type KPIs have a target on the same 1-5 scale as the scores
+  // this chart plots — a percentage/days/currency/number target averaged in
+  // would silently mix units into a meaningless reference line.
+  const avgTarget = averageRatingScaleTarget(kpis.map((kt) => kt.kpi));
 
   // ---- score distribution ----
   const scoredMembers = members.filter((m) => memberAverages.has(m.id));

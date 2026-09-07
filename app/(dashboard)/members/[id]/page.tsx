@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { DesignationModal } from "@/components/members/DesignationModal";
 import { MemberHero } from "@/components/members/MemberHero";
 import { MemberTrendChart } from "@/components/members/MemberTrendChart";
+import { isKpiScoreOnTarget } from "@/lib/kpi-status";
 
 const STATUS_BADGE: Record<string, string> = {
   draft: "In progress",
@@ -52,12 +53,7 @@ export default async function MemberProfilePage({ params }: PageProps<"/members/
     ? memberKpiScores.reduce((s, r) => s + Number(r.score), 0) / memberKpiScores.length
     : null;
 
-  const kpisOnTarget = memberKpiScores.filter((s) => {
-    if (s.kpi.targetNumeric == null) return false;
-    return s.kpi.direction === "lower_is_better"
-      ? Number(s.score) <= Number(s.kpi.targetNumeric)
-      : Number(s.score) >= Number(s.kpi.targetNumeric);
-  }).length;
+  const kpisOnTarget = memberKpiScores.filter((s) => isKpiScoreOnTarget(Number(s.score), s.kpi)).length;
 
   const reviews = await prisma.review.findMany({
     where: { revieweeId: member.id },
