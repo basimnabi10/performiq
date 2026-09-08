@@ -97,7 +97,10 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
 
           <FrostCard>
             <MembersTable
-          rows={members.map((m) => {
+              removableMemberIds={
+                actor.authRole === "admin" ? members.filter((m) => m.id !== actor.id).map((m) => m.id) : []
+              }
+              rows={members.map((m) => {
             const scores = scoreByMember.get(m.id);
             return {
               id: m.id,

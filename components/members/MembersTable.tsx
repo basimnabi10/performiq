@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
+import { RemoveMemberButton } from "@/components/members/RemoveMemberButton";
 
 export type ReviewStatusKind = "reviewed" | "in_progress" | "overdue" | "not_started" | "invited";
 
@@ -23,17 +24,31 @@ const REVIEW_STATUS_STYLE: Record<ReviewStatusKind, { label: string; color: stri
 
 const GRID_COLUMNS = "1fr 190px 160px 110px 40px";
 const GRID_COLUMNS_NO_TEAM = "1fr 200px 130px 120px 44px";
+// Removing gets its own trailing column so the arrow keeps its place.
+const GRID_COLUMNS_REMOVABLE = "1fr 190px 160px 110px 40px 40px";
+const GRID_COLUMNS_NO_TEAM_REMOVABLE = "1fr 200px 130px 120px 44px 40px";
 
 export function MembersTable({
   rows,
   /** Team-detail pages already say which team you're on — the per-row team
    * pill is pure noise there, so the column collapses to a plain role. */
   showTeam = true,
+  /** Admin-only, and never against your own row. */
+  removableMemberIds,
 }: {
   rows: MembersTableRow[];
   showTeam?: boolean;
+  removableMemberIds?: string[];
 }) {
-  const grid = showTeam ? GRID_COLUMNS : GRID_COLUMNS_NO_TEAM;
+  const removable = new Set(removableMemberIds ?? []);
+  const canRemoveAny = removable.size > 0;
+  const grid = showTeam
+    ? canRemoveAny
+      ? GRID_COLUMNS_REMOVABLE
+      : GRID_COLUMNS
+    : canRemoveAny
+      ? GRID_COLUMNS_NO_TEAM_REMOVABLE
+      : GRID_COLUMNS_NO_TEAM;
   if (rows.length === 0) {
     return <div className="piq-caption">No members match these filters.</div>;
   }
@@ -59,6 +74,7 @@ export function MembersTable({
           <div>Review status</div>
           <div>KPI score</div>
           <div />
+          {canRemoveAny ? <div /> : null}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -143,6 +159,14 @@ export function MembersTable({
                 >
                   <iconify-icon icon="ant-design:arrow-right-outlined" width={15} />
                 </span>
+
+                {canRemoveAny ? (
+                  removable.has(m.id) ? (
+                    <RemoveMemberButton memberId={m.id} memberName={m.name} />
+                  ) : (
+                    <span />
+                  )
+                ) : null}
               </Link>
             );
           })}
