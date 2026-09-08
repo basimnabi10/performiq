@@ -7,6 +7,7 @@ import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
 import { TeamKpiCreateModal } from "@/components/kpis/TeamKpiCreateModal";
 import { METRIC_ICON } from "@/components/kpis/TeamKpiCreateModal";
 import { KpiCurrentCell } from "@/components/kpis/KpiCurrentCell";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { kpiMeasurementStatus } from "@/lib/kpi-status";
 
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
@@ -154,7 +155,13 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       </div>
 
       {!activeCycle ? (
-        <div className="piq-caption">Start a review cycle to add KPIs for this team.</div>
+        <EmptyState
+          icon="ant-design:aim-outlined"
+          title="No active review cycle"
+          body="KPIs are defined per cycle, so start one from the dashboard first — then add the metrics this team is measured on."
+          actionHref="/hod-dashboard"
+          actionLabel="Go to dashboard"
+        />
       ) : (
         <>
           <div style={{ display: "flex", gap: 16 }}>

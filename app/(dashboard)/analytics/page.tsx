@@ -3,6 +3,7 @@ import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { cycleScopeWhere } from "@/lib/cycles";
 import { StatCard } from "@/components/ui/StatCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { TeamSelect } from "@/components/analytics/TeamSelect";
 import { AnalyticsTrendChart } from "@/components/analytics/AnalyticsTrendChart";
 import { ScoreDistributionPanel } from "@/components/analytics/ScoreDistributionPanel";
@@ -56,10 +57,13 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div className="piq-h1">Analytics</div>
-        <div className="piq-caption">
-          No review cycle exists yet for this scope — start one from the department dashboard, then add KPIs and
-          complete a few reviews to see analytics here.
-        </div>
+        <EmptyState
+          icon="ant-design:line-chart-outlined"
+          title="Nothing to analyze yet"
+          body="Analytics is built from completed reviews. Start a cycle, add KPIs, and once a few reviews are submitted the trends, distribution and leaderboards fill in here."
+          actionHref="/hod-dashboard"
+          actionLabel="Go to dashboard"
+        />
       </div>
     );
   }

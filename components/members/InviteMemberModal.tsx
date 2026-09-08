@@ -111,8 +111,18 @@ export function InviteMemberModal({
               <iconify-icon icon="ant-design:check-circle-filled" width={30} />
             </span>
             <div className="piq-body">
-              <strong>{success.name}</strong> ({success.email}) has been invited
-              {success.source === "odoo" ? " — auto-filled from Odoo HR." : "."}
+              {success.reusedExistingAccount ? (
+                <>
+                  <strong>{success.email}</strong> already had an account from a previous invite, so they&rsquo;ve been
+                  added straight to the team — no new email was sent. They sign in with their existing password (or
+                  reset it from the login page).
+                </>
+              ) : (
+                <>
+                  <strong>{success.name}</strong> ({success.email}) has been invited
+                  {success.source === "odoo" ? " — auto-filled from Odoo HR." : "."}
+                </>
+              )}
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <Button

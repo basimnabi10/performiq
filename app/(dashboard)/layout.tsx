@@ -15,7 +15,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   try {
     member = await getCurrentMember();
   } catch (e) {
-    if (e instanceof AuthzError) redirect("/login");
+    // A valid auth session with no member row can't just go to /login —
+    // proxy.ts would bounce it straight back here. Clear the session first.
+    if (e instanceof AuthzError) redirect("/api/auth/orphaned");
     throw e;
   }
 

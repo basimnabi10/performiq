@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { authActionClient } from "@/lib/safe-action";
 import { requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseAdminClient, findAuthUserByEmail } from "@/lib/supabase/admin";
+import { getAppBaseUrl } from "@/lib/app-url";
 import { odooLookup, odooSuggestions } from "@/lib/integrations/odoo";
 import { checkRateLimit, inviteRateLimit } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/audit";
@@ -81,16 +82,44 @@ export const inviteMember = authActionClient
       },
     });
 
+    // A Supabase auth account outlives its Member row (removal from the org,
+    // or a data reset), so the same address can already be registered even
+    // though nobody by that name exists in the app. Inviting then fails with
+    // `email_exists` — which no amount of retrying fixes. Re-link that
+    // account to the new member instead of dead-ending.
+    let reusedExistingAccount = false;
     try {
       const supabaseAdmin = createSupabaseAdminClient();
       const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
+        redirectTo: `${await getAppBaseUrl()}/api/auth/callback`,
       });
-      if (error) throw new Error(error.message);
-    } catch {
+
+      if (error?.code === "email_exists") {
+        const authUser = await findAuthUserByEmail(supabaseAdmin, email);
+        if (!authUser) {
+          throw new Error(
+            "That address is already registered but its account can't be found. Ask a Supabase admin to remove it, then invite again.",
+          );
+        }
+        await prisma.member.update({
+          where: { id: created.id },
+          data: { authUserId: authUser.id, status: "active" },
+        });
+        reusedExistingAccount = true;
+      } else if (error) {
+        // Surface the real reason — the built-in email sender is rate
+        // limited, and "please try again" sends people in circles.
+        const rateLimited = error.status === 429 || /rate limit/i.test(error.message);
+        throw new Error(
+          rateLimited
+            ? "Supabase's built-in email sender has hit its rate limit. Wait a few minutes, or configure SMTP to send invites reliably."
+            : `Couldn't send the invite email: ${error.message}`,
+        );
+      }
+    } catch (e) {
       // Don't leave an orphaned Member row the caller can't retry against.
       await prisma.member.delete({ where: { id: created.id } });
-      throw new Error("Couldn't send the invite email. Please try again.");
+      throw e instanceof Error ? e : new Error("Couldn't send the invite email. Please try again.");
     }
 
     await logActivity({
@@ -99,7 +128,7 @@ export const inviteMember = authActionClient
       verb: "invited",
       targetType: "Member",
       targetId: created.id,
-      metadata: { name: created.name, team: team.name, source: extra.source },
+      metadata: { name: created.name, team: team.name, source: extra.source, reusedExistingAccount },
     });
 
     revalidatePath("/members");
@@ -110,6 +139,7 @@ export const inviteMember = authActionClient
       name: created.name,
       email: created.email,
       source: extra.source,
+      reusedExistingAccount,
     };
   });
 

@@ -6,7 +6,7 @@ import { login } from "@/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { FrostCard } from "@/components/ui/FrostCard";
 
-export function LoginForm() {
+export function LoginForm({ notice }: { notice?: string }) {
   const { execute, isExecuting, result } = useAction(login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,6 +32,25 @@ export function LoginForm() {
         />
         <span className="piq-h2">PerformIQ</span>
       </div>
+
+      {notice ? (
+        <div
+          style={{
+            display: "flex",
+            gap: 9,
+            padding: "12px 14px",
+            background: "rgba(89,99,146,.10)",
+            border: "1px solid rgba(168,175,203,.4)",
+            borderRadius: 12,
+            fontSize: 12.5,
+            color: "#454D7A",
+            lineHeight: 1.5,
+          }}
+        >
+          <iconify-icon icon="ant-design:info-circle-outlined" width={15} style={{ color: "#596392", flexShrink: 0, marginTop: 1 }} />
+          {notice}
+        </div>
+      ) : null}
 
       <form
         onSubmit={(e) => {

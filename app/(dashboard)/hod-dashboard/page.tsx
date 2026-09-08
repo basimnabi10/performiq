@@ -82,9 +82,11 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
     // Setting up from scratch has an order to it: a cycle with no teams or
     // people in it generates no reviews and shows nothing, so point at the
     // missing step rather than offering a cycle that would come up empty.
-    const memberCount = await prisma.member.count({
-      where: actor.authRole === "admin" ? { orgId: actor.orgId } : { departmentId: actor.departmentId ?? "" },
-    });
+    // Count people ON a team, not org members: KPIs and review forms hang
+    // off a team, so an admin with no team of their own doesn't make a cycle
+    // meaningful — a cycle started before anyone is on a team produces
+    // review forms with no KPIs to score.
+    const teamedMemberCount = await prisma.member.count({ where: { teamId: { in: allTeams.map((t) => t.id) } } });
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div className="piq-h1">{departmentName}</div>
@@ -96,11 +98,11 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             actionHref="/settings"
             actionLabel="Go to Settings"
           />
-        ) : memberCount <= 1 ? (
+        ) : teamedMemberCount === 0 ? (
           <EmptyState
             icon="ant-design:user-add-outlined"
             title="Invite your team"
-            body="You have a team but nobody in it yet. Invite people first — starting a review cycle now would create no reviews."
+            body="Your teams are empty. Invite people into a team first — a cycle started now would generate review forms with no KPIs to score."
             actionHref="/members"
             actionLabel="Invite members"
           />

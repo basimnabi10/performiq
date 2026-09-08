@@ -64,8 +64,16 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/set-password");
-  const isApiPublic = pathname.startsWith("/api/auth/callback") || pathname.startsWith("/api/health");
+  // /set-password is reachable both signed-out (link not yet exchanged) and
+  // signed-in — accepting an invite establishes a session and THEN asks for a
+  // password, so it must not be treated as a "you're already signed in, go
+  // away" route or the invitee is bounced to a dashboard and never sets one.
+  const isSetPassword = pathname.startsWith("/set-password");
+  const isAuthRoute = pathname.startsWith("/login") || isSetPassword;
+  const isApiPublic =
+    pathname.startsWith("/api/auth/callback") ||
+    pathname.startsWith("/api/auth/orphaned") ||
+    pathname.startsWith("/api/health");
   const isPublic = isAuthRoute || isApiPublic;
 
   if (!data.user && !isPublic) {
@@ -76,7 +84,7 @@ export async function proxy(request: NextRequest) {
     return redirect;
   }
 
-  if (data.user && isAuthRoute) {
+  if (data.user && isAuthRoute && !isSetPassword) {
     const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
     redirect.headers.set("Content-Security-Policy", csp);
     return redirect;
