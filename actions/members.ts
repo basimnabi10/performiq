@@ -97,7 +97,7 @@ export const inviteMember = authActionClient
     try {
       const supabaseAdmin = createSupabaseAdminClient();
       const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        redirectTo: `${await getAppBaseUrl()}/api/auth/callback`,
+        redirectTo: `${await getAppBaseUrl()}/accept`,
       });
 
       if (error?.code === "email_exists") {

@@ -68,7 +68,10 @@ export async function proxy(request: NextRequest) {
   // signed-in — accepting an invite establishes a session and THEN asks for a
   // password, so it must not be treated as a "you're already signed in, go
   // away" route or the invitee is bounced to a dashboard and never sets one.
-  const isSetPassword = pathname.startsWith("/set-password");
+  // /accept and /set-password both need to work WITH a session: accepting an
+  // invite signs you in and only then asks for a password, so bouncing
+  // signed-in users off them strands invitees without one.
+  const isSetPassword = pathname.startsWith("/set-password") || pathname.startsWith("/accept");
   const isAuthRoute = pathname.startsWith("/login") || isSetPassword;
   const isApiPublic =
     pathname.startsWith("/api/auth/callback") ||
