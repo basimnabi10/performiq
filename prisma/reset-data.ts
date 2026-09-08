@@ -16,8 +16,13 @@
  * Run with:  npm run db:reset-data -- --yes
  * (the flag is required; there's no undo)
  */
+import { config as loadEnv } from "dotenv";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client";
+
+// Same convention as prisma.config.ts: real credentials live in .env.local,
+// which the Prisma CLI loads but a plain `tsx` run does not.
+loadEnv({ path: ".env.local" });
 
 const adapter = new PrismaPg({ connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
