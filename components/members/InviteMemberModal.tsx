@@ -12,12 +12,28 @@ interface TeamOption {
   name: string;
 }
 
+const ROLE_OPTIONS = [
+  {
+    value: "ic" as const,
+    label: "Team member",
+    blurb: "Sees their own dashboard, reviews and learning.",
+    icon: "ant-design:user-outlined",
+  },
+  {
+    value: "admin" as const,
+    label: "Admin",
+    blurb: "Manages teams, members, KPIs, cycles and settings.",
+    icon: "ant-design:safety-certificate-outlined",
+  },
+];
+
 export function InviteMemberModal({
   teams,
   simple = false,
   variant = "primary",
   size,
   kpiCount,
+  canGrantAdmin = false,
 }: {
   teams: TeamOption[];
   /** Team-detail entry point: skip team selection (fixed) and hide the Odoo toggle. */
@@ -26,10 +42,13 @@ export function InviteMemberModal({
   size?: "sm" | "md" | "lg" | "header";
   /** Team-detail entry point: spells out what the invitee inherits on joining. */
   kpiCount?: number;
+  /** Only admins may grant the admin role, so the option is hidden otherwise. */
+  canGrantAdmin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [teamId, setTeamId] = useState(teams[0]?.id ?? "");
   const [mode, setMode] = useState<"manual" | "odoo">("manual");
+  const [authRole, setAuthRole] = useState<"ic" | "admin">("ic");
   const [email, setEmail] = useState("");
   const [lookupTerm, setLookupTerm] = useState("");
 
@@ -60,6 +79,7 @@ export function InviteMemberModal({
     lookup.reset();
     setLookupTerm("");
     setEmail("");
+    setAuthRole("ic");
   }
 
   if (!open) {
@@ -142,9 +162,9 @@ export function InviteMemberModal({
             onSubmit={(e) => {
               e.preventDefault();
               if (mode === "manual") {
-                invite.execute({ mode: "manual", teamId, email });
+                invite.execute({ mode: "manual", teamId, email, authRole });
               } else if (fetched) {
-                invite.execute({ mode: "odoo", teamId, lookupTerm: fetched.email });
+                invite.execute({ mode: "odoo", teamId, lookupTerm: fetched.email, authRole });
               }
             }}
             style={{ display: "flex", flexDirection: "column", gap: 14 }}
@@ -178,6 +198,73 @@ export function InviteMemberModal({
                 </select>
               </label>
             )}
+
+            <div>
+              <div className="piq-caption" style={{ marginBottom: 8 }}>
+                Role
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {ROLE_OPTIONS.filter((r) => r.value !== "admin" || canGrantAdmin).map((r) => {
+                  const active = authRole === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setAuthRole(r.value)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 11,
+                        padding: 13,
+                        borderRadius: 14,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        fontFamily: "'Switzer',sans-serif",
+                        background: active ? "rgba(39,63,249,.08)" : "rgba(255,255,255,.5)",
+                        border: `1.5px solid ${active ? "#273FF9" : "rgba(255,255,255,.75)"}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 11,
+                          background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "rgba(58,99,250,.10)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: active ? "#fff" : "#273FF9",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <iconify-icon icon={r.icon} width={17} />
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#181835" }}>{r.label}</span>
+                        <span style={{ display: "block", fontSize: 11, color: "#767FA5", marginTop: 1 }}>{r.blurb}</span>
+                      </span>
+                      <span
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#fff",
+                          background: active ? "#273FF9" : "transparent",
+                          border: `1.5px solid ${active ? "#273FF9" : "rgba(168,175,203,.6)"}`,
+                          opacity: active ? 1 : 0.45,
+                        }}
+                      >
+                        <iconify-icon icon="ant-design:check-outlined" width={12} />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {simple ? null : (
               <div style={{ display: "flex", gap: 5, padding: 5, background: "rgba(255,255,255,.55)", border: "1px solid rgba(255,255,255,.7)", borderRadius: 13 }}>

@@ -114,7 +114,12 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
         </div>
         {canManage ? (
           activeTab === "members" ? (
-            <InviteMemberModal teams={[{ id: team.id, name: team.name }]} simple kpiCount={kpiTeams.length} />
+            <InviteMemberModal
+              teams={[{ id: team.id, name: team.name }]}
+              simple
+              kpiCount={kpiTeams.length}
+              canGrantAdmin={actor.authRole === "admin"}
+            />
           ) : activeCycle ? (
             <TeamKpiCreateModal
               cycleId={activeCycle.id}

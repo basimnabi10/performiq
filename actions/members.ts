@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { authActionClient } from "@/lib/safe-action";
-import { requireRole, requireScopeAccess } from "@/lib/authz";
+import { AuthzError, requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient, findAuthUserByEmail } from "@/lib/supabase/admin";
 import { getAppBaseUrl } from "@/lib/app-url";
@@ -35,6 +35,12 @@ export const inviteMember = authActionClient
     const team = await prisma.team.findUnique({ where: { id: parsedInput.teamId } });
     if (!team) throw new Error("Team not found.");
     await requireScopeAccess(actor, { teamId: team.id });
+
+    // Only an admin can create another admin — otherwise anyone who can
+    // invite could grant themselves a colleague with full org access.
+    if (parsedInput.authRole === "admin" && actor.authRole !== "admin") {
+      throw new AuthzError("Only an admin can invite another admin.");
+    }
 
     let email: string;
     let extra: {
@@ -77,7 +83,7 @@ export const inviteMember = authActionClient
         teamId: team.id,
         departmentId: team.departmentId,
         status: "invited",
-        authRole: "ic",
+        authRole: parsedInput.authRole,
         ...extra,
       },
     });
@@ -128,7 +134,7 @@ export const inviteMember = authActionClient
       verb: "invited",
       targetType: "Member",
       targetId: created.id,
-      metadata: { name: created.name, team: team.name, source: extra.source, reusedExistingAccount },
+      metadata: { name: created.name, team: team.name, source: extra.source, role: parsedInput.authRole, reusedExistingAccount },
     });
 
     revalidatePath("/members");

@@ -459,7 +459,12 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
         />
 
         <div style={{ gridColumn: "1/-1", display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <InviteMemberModal teams={allTeams.map((t) => ({ id: t.id, name: t.name }))} variant="secondary" size="header" />
+          <InviteMemberModal
+            teams={allTeams.map((t) => ({ id: t.id, name: t.name }))}
+            variant="secondary"
+            size="header"
+            canGrantAdmin={actor.authRole === "admin"}
+          />
           <StartCycleModal
             departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
             variant="secondary"

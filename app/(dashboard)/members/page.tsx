@@ -80,7 +80,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
             {members.length} people{activeCycle ? ` · ${activeCycle.label} cycle` : ""}
           </div>
         </div>
-        {canInvite && teams.length > 0 ? <InviteMemberModal teams={teams} /> : null}
+        {canInvite && teams.length > 0 ? <InviteMemberModal teams={teams} canGrantAdmin={actor.authRole === "admin"} /> : null}
       </div>
 
       {teams.length === 0 ? (
