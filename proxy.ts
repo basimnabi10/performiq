@@ -71,7 +71,10 @@ export async function proxy(request: NextRequest) {
   // /accept and /set-password both need to work WITH a session: accepting an
   // invite signs you in and only then asks for a password, so bouncing
   // signed-in users off them strands invitees without one.
-  const isSetPassword = pathname.startsWith("/set-password") || pathname.startsWith("/accept");
+  const isSetPassword =
+    pathname.startsWith("/set-password") ||
+    pathname.startsWith("/accept") ||
+    pathname.startsWith("/complete-profile");
   const isAuthRoute = pathname.startsWith("/login") || isSetPassword;
   const isApiPublic =
     pathname.startsWith("/api/auth/callback") ||

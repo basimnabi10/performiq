@@ -6,6 +6,7 @@ import { departmentCycleWhere, findActiveCycleForDepartment } from "@/lib/cycles
 import { DesignationModal } from "@/components/members/DesignationModal";
 import { MemberHero } from "@/components/members/MemberHero";
 import { MemberTrendChart } from "@/components/members/MemberTrendChart";
+import { StartMemberReviewButton } from "@/components/members/StartMemberReviewButton";
 import { isKpiScoreOnTarget } from "@/lib/kpi-status";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -134,6 +135,14 @@ export default async function MemberProfilePage({ params }: PageProps<"/members/
         statusKey={statusKey}
         reviewHref={currentCycleReview ? `/reviews/${currentCycleReview.id}` : null}
         ctaLabel={currentCycleReview?.status === "completed" ? "View review" : "Start review"}
+        reviewAction={
+          // Cycle shells are generated once, when the cycle starts, so anyone
+          // invited later has none and would otherwise have no way to be
+          // reviewed from here at all.
+          canEdit && activeCycle && !currentCycleReview && member.id !== actor.id ? (
+            <StartMemberReviewButton cycleId={activeCycle.id} revieweeId={member.id} reviewerId={actor.id} />
+          ) : null
+        }
         designationTrigger={
           canEdit ? (
             <DesignationModal

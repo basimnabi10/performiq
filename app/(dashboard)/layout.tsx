@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AuthzError, getCurrentMember } from "@/lib/authz";
+import { AuthzError, getCurrentMember, isPlaceholderName } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/layout/Sidebar";
 
@@ -20,6 +20,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (e instanceof AuthzError) redirect("/api/auth/orphaned");
     throw e;
   }
+
+  if (isPlaceholderName(member.name)) redirect("/complete-profile");
 
   const [organization, department, team] = await Promise.all([
     prisma.organization.findUnique({ where: { id: member.orgId }, select: { name: true } }),

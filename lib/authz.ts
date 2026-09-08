@@ -153,3 +153,12 @@ export async function requireCanAuthorCourses(member: Member): Promise<void> {
     throw new AuthzError("Ask your HOD to approve a lesson request before authoring courses.");
   }
 }
+
+/**
+ * A manual invite only knows an email, so the member row starts life as
+ * "Pending (<email>)". Until the person replaces it they read as pending
+ * throughout the app, so this gates the complete-profile step.
+ */
+export function isPlaceholderName(name: string): boolean {
+  return /^Pending \(/i.test(name.trim());
+}

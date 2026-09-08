@@ -22,6 +22,8 @@ export function MemberHero({
   statusKey,
   reviewHref,
   ctaLabel,
+  /** Shown in place of the review link when no review exists yet. */
+  reviewAction,
   designationTrigger,
 }: {
   name: string;
@@ -37,6 +39,7 @@ export function MemberHero({
   statusKey: string;
   reviewHref: string | null;
   ctaLabel: string;
+  reviewAction?: React.ReactNode;
   designationTrigger: React.ReactNode;
 }) {
   const status = STATUS_STYLE[statusKey] ?? STATUS_STYLE.pending;
@@ -155,6 +158,7 @@ export function MemberHero({
           ) : null}
         </div>
         <div style={{ display: "flex", gap: 12, marginTop: 22 }}>
+          {!reviewHref && reviewAction ? reviewAction : null}
           {reviewHref ? (
             <Link
               href={reviewHref}

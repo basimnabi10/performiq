@@ -6,6 +6,7 @@ import { AuthzError, requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient, findAuthUserByEmail } from "@/lib/supabase/admin";
 import { getAppBaseUrl } from "@/lib/app-url";
+import { findActiveCycleForDepartment } from "@/lib/cycles";
 import { odooLookup, odooSuggestions } from "@/lib/integrations/odoo";
 import { checkRateLimit, inviteRateLimit } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/audit";
@@ -131,6 +132,30 @@ export const inviteMember = authActionClient
       // Don't leave an orphaned Member row the caller can't retry against.
       await prisma.member.delete({ where: { id: created.id } });
       throw e instanceof Error ? e : new Error("Couldn't send the invite email. Please try again.");
+    }
+
+    // Cycle shells are generated once, when a cycle starts — so without this
+    // anyone invited mid-cycle has no review to fill in and no way to be
+    // reviewed until the next cycle begins.
+    const activeCycle = await findActiveCycleForDepartment(actor.orgId, team.departmentId);
+    if (activeCycle) {
+      await prisma.review.createMany({
+        data: [
+          { cycleId: activeCycle.id, revieweeId: created.id, reviewerId: created.id, type: "self", status: "pending" },
+          ...(created.managerId
+            ? [
+                {
+                  cycleId: activeCycle.id,
+                  revieweeId: created.id,
+                  reviewerId: created.managerId,
+                  type: "manager" as const,
+                  status: "pending" as const,
+                },
+              ]
+            : []),
+        ],
+        skipDuplicates: true,
+      });
     }
 
     await logActivity({
