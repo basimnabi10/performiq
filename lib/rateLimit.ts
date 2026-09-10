@@ -10,13 +10,30 @@ import { Redis } from "@upstash/redis";
  * without Redis still works — but this must be configured before production
  * deploy (see .env.example).
  */
-const redis =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      })
-    : null;
+/**
+ * A truthiness check is not enough: `vercel env pull` writes the literal
+ * string "[SENSITIVE]" for variables marked sensitive, and the Upstash
+ * client throws on a non-https URL at module load -- which takes down every
+ * action that imports this file, including login. Validate the shape so a
+ * bad value degrades to "no rate limiting" (and says so) instead of
+ * breaking authentication outright.
+ */
+const upstashUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
+const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+const upstashConfigured = Boolean(
+  upstashUrl?.startsWith("https://") && upstashToken && upstashToken !== "[SENSITIVE]",
+);
+
+if (upstashUrl && !upstashConfigured) {
+  console.warn(
+    "Rate limiting disabled: UPSTASH_REDIS_REST_URL/TOKEN are set but not usable " +
+      "(expected an https URL). Check the values in this environment.",
+  );
+}
+
+const redis = upstashConfigured
+  ? new Redis({ url: upstashUrl!, token: upstashToken! })
+  : null;
 
 function makeLimiter(tokens: number, window: `${number} ${"s" | "m" | "h"}`) {
   if (!redis) {
