@@ -193,6 +193,140 @@ iconify-icon {
   display: inline-block;
 }
 
+/* ---------------------------------------------------------------------------
+ * Auth screens — the two-panel frame and its form controls.
+ * ------------------------------------------------------------------------- */
+
+.piq-auth-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 22px;
+  width: 100%;
+  max-width: 1060px;
+  align-items: stretch;
+}
+
+.piq-auth-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.piq-auth-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The brand panel is decorative — below 900px it drops out entirely rather
+   than squeezing the form into half a phone screen. */
+@media (max-width: 900px) {
+  .piq-auth-grid {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
+  .piq-auth-aside {
+    display: none;
+  }
+}
+
+.piq-input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+  font-family: var(--font-sans);
+  font-size: var(--text-body-size);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-strong);
+  outline: none;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.piq-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.piq-input:focus-visible {
+  border-color: var(--blue-300);
+  box-shadow: var(--focus-ring);
+}
+
+.piq-input-invalid {
+  border-color: rgba(255, 90, 95, 0.6);
+}
+
+.piq-input-invalid:focus-visible {
+  box-shadow: 0 0 0 4px rgba(255, 90, 95, 0.12);
+}
+
+/* Password reveal toggle, pinned in the input's right gutter. */
+.piq-reveal {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease;
+}
+
+.piq-reveal:hover {
+  color: var(--text-body);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.piq-reveal:focus-visible {
+  outline: none;
+  color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* Brand lockup inside the form card — only shown when the brand panel is
+   hidden, so the wordmark never appears twice at once. */
+.piq-auth-brand {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .piq-auth-brand {
+    display: flex;
+  }
+}
+
+/* Text link used for "Forgot password?" / "Back to sign in". */
+.piq-authlink {
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  color: var(--color-primary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+
+.piq-authlink:hover {
+  text-decoration: underline;
+}
+
+.piq-authlink:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -200,5 +334,21 @@ iconify-icon {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* Indeterminate spinner for the invite / reset link verification step. */
+.piq-authspinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(39, 63, 249, 0.18);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: piq-spin 0.7s linear infinite;
+}
+
+@keyframes piq-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { actionClient } from "@/lib/safe-action";
-import { checkRateLimit, loginRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit, loginRateLimit, passwordResetRateLimit } from "@/lib/rateLimit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 
@@ -40,6 +40,68 @@ export const logout = actionClient.action(async () => {
   await supabase.auth.signOut();
   redirect("/login");
 });
+
+const forgotPasswordSchema = z.object({
+  email: z.email({ error: "Enter a valid email address." }),
+});
+
+/**
+ * Sends a password-reset email.
+ *
+ * Always reports success, even for an address with no account and even when
+ * Supabase itself errors: the response is the one thing an unauthenticated
+ * caller can observe, so varying it turns this form into an oracle for which
+ * of your employees have accounts. Real failures are logged server-side.
+ *
+ * The link lands on /accept, which establishes the recovery session and
+ * forwards to /reset-password (see AcceptInvite).
+ */
+export const requestPasswordReset = actionClient
+  .schema(forgotPasswordSchema)
+  .action(async ({ parsedInput: { email } }) => {
+    await checkRateLimit(passwordResetRateLimit, `${await clientIp()}:${email}`);
+
+    const supabase = await createSupabaseServerClient();
+    const origin = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/accept?type=recovery`,
+    });
+    if (error) {
+      console.error("Supabase reset-password-email error:", error.status, error.message);
+    }
+    return { sent: true };
+  });
+
+const resetPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(8, { error: "Use at least 8 characters." })
+    .regex(/[a-zA-Z]/, { error: "Include at least one letter." })
+    .regex(/[0-9]/, { error: "Include at least one number." }),
+});
+
+/**
+ * Sets a new password for someone who arrived from a reset email.
+ *
+ * Unlike `setPassword` this never asks for a name — the account already
+ * exists, and blanking or re-prompting for a name someone set months ago
+ * would be a regression, not a fix.
+ */
+export const resetPassword = actionClient
+  .schema(resetPasswordSchema)
+  .action(async ({ parsedInput: { password } }) => {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      throw new Error("Your reset link has expired. Request a new one to continue.");
+    }
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      console.error("Supabase reset-password error:", error.status, error.message);
+      throw new Error("Couldn't update your password. Please try again.");
+    }
+    redirect("/dashboard");
+  });
 
 const setPasswordSchema = z.object({
   name: z.string().trim().min(2, { error: "Enter your full name." }).max(80),

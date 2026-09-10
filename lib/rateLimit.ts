@@ -33,6 +33,9 @@ function makeLimiter(tokens: number, window: `${number} ${"s" | "m" | "h"}`) {
 
 export const loginRateLimit = makeLimiter(10, "1 m");
 export const inviteRateLimit = makeLimiter(20, "1 h");
+// Deliberately tighter than login: a reset request sends mail to a third
+// party, so spamming it is a way to harass someone else's inbox.
+export const passwordResetRateLimit = makeLimiter(5, "15 m");
 export const lessonRequestRateLimit = makeLimiter(10, "1 h");
 export const odooLookupRateLimit = makeLimiter(30, "1 m");
 
