@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { openCurrentCycles } from "@/lib/cycle-open";
+import { closeElapsedCycles, openCurrentCycles } from "@/lib/cycle-open";
 
 /**
  * Opens the current month's review cycle for every scope that needs one.
@@ -28,8 +28,11 @@ export async function GET(request: NextRequest) {
   const results = [];
   for (const org of organizations) {
     try {
-      const result = await openCurrentCycles(org.id);
-      results.push({ orgId: org.id, ...result });
+      // Close first, so a month that has just ended is not briefly
+      // recorded as running alongside the one replacing it.
+      const closed = await closeElapsedCycles(org.id);
+      const opened = await openCurrentCycles(org.id);
+      results.push({ orgId: org.id, ...opened, closed: closed.closed, quartersClosed: closed.quartersClosed });
     } catch (e) {
       // One organization failing must not stop the rest from getting their
       // month opened.

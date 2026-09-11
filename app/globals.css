@@ -352,3 +352,80 @@ iconify-icon {
     transform: rotate(360deg);
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Month picker — the dashboard's period selector.
+ * ------------------------------------------------------------------------- */
+
+.piq-monthpicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.62);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-strong);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.piq-monthpicker:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.piq-monthpicker:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.piq-monthpicker-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
+  backdrop-filter: blur(30px) saturate(140%);
+  box-shadow: 0 12px 32px rgba(24, 24, 53, 0.16);
+}
+
+.piq-monthpicker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-family: var(--font-sans);
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.piq-monthpicker-item:hover {
+  background: rgba(39, 63, 249, 0.07);
+}
+
+.piq-monthpicker-item.is-selected {
+  background: rgba(39, 63, 249, 0.1);
+}
+
+.piq-monthpicker-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

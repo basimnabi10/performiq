@@ -175,3 +175,59 @@ export async function openCurrentCycles(orgId: string, now: Date = new Date()): 
 
   return { year, month, opened, alreadyOpen };
 }
+
+export interface CloseElapsedResult {
+  closed: { cycleId: string; label: string }[];
+  quartersClosed: string[];
+}
+
+/**
+ * Closes every month whose period has passed, and any quarter whose three
+ * months are all closed. Called by the same daily job that opens months, so
+ * the calendar advances with no one pressing anything.
+ *
+ * "Closed" here marks the month as no longer current -- it does NOT lock the
+ * reviews inside it. A reviewer can still submit a late review for a closed
+ * month (see assertCanEditReview), which is why a past month's score, and
+ * the quarter average built from it, can still move after the fact.
+ */
+export async function closeElapsedCycles(orgId: string, now: Date = new Date()): Promise<CloseElapsedResult> {
+  const { year, month } = periodFor(now);
+
+  const elapsed = await prisma.reviewCycle.findMany({
+    where: {
+      orgId,
+      status: "in_progress",
+      // Anything before the current month: an earlier year, or an earlier
+      // month within this year.
+      OR: [{ year: { lt: year } }, { year, month: { lt: month } }],
+    },
+    select: { id: true, label: true, quarterId: true },
+  });
+
+  if (elapsed.length === 0) return { closed: [], quartersClosed: [] };
+
+  await prisma.reviewCycle.updateMany({
+    where: { id: { in: elapsed.map((c) => c.id) } },
+    data: { status: "closed" },
+  });
+
+  // A quarter is done once all three of its months are.
+  const quarterIds = [...new Set(elapsed.map((c) => c.quarterId).filter((id): id is string => id != null))];
+  const quartersClosed: string[] = [];
+  for (const quarterId of quarterIds) {
+    const siblings = await prisma.reviewCycle.findMany({
+      where: { quarterId },
+      select: { status: true },
+    });
+    if (siblings.length === 3 && siblings.every((s) => s.status === "closed")) {
+      await prisma.quarter.update({ where: { id: quarterId }, data: { status: "closed" } });
+      quartersClosed.push(quarterId);
+    }
+  }
+
+  return {
+    closed: elapsed.map((c) => ({ cycleId: c.id, label: c.label })),
+    quartersClosed,
+  };
+}
