@@ -2,66 +2,52 @@
 
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
-import { setPassword } from "@/actions/auth";
+import Link from "next/link";
+import { resetPassword } from "@/actions/auth";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Button } from "@/components/ui/Button";
-import { Field, PasswordField } from "@/components/ui/Field";
+import { PasswordField } from "@/components/ui/Field";
 import { FormError } from "@/components/ui/FormMessage";
 
-export function SetPasswordForm() {
-  const { execute, isExecuting, result } = useAction(setPassword);
-  const [name, setName] = useState("");
-  const [password, setPasswordValue] = useState("");
+export function ResetPasswordForm() {
+  const { execute, isExecuting, result } = useAction(resetPassword);
+  const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
   const mismatch = confirm.length > 0 && password !== confirm;
   const error =
     result.serverError ??
-    result.validationErrors?.name?._errors?.[0] ??
     result.validationErrors?.password?._errors?.[0] ??
     (mismatch ? "Both passwords must match." : undefined);
 
   return (
     <AuthCard
-      title="Welcome to PerformIQ"
-      blurb="Choose a password to finish setting up your account."
+      title="Choose a new password"
+      blurb="Pick something you haven't used here before. You'll be signed in once it's saved."
     >
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (password !== confirm) return;
-          execute({ name, password });
+          execute({ password });
         }}
         style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
-        <Field
-          label="Full name"
-          type="text"
-          required
-          minLength={2}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          autoComplete="name"
-          autoFocus
-          placeholder="Ali Sohaib"
-          icon="ant-design:user-outlined"
-          invalid={Boolean(result.validationErrors?.name)}
-        />
-
         <PasswordField
           label="New password"
           toggleLabel="new password"
           required
           minLength={8}
           value={password}
-          onChange={(e) => setPasswordValue(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
+          autoFocus
           hint="At least 8 characters, including a letter and a number."
           invalid={Boolean(result.validationErrors?.password)}
         />
 
         <PasswordField
-          label="Confirm password"
+          label="Confirm new password"
           toggleLabel="password confirmation"
           required
           minLength={8}
@@ -75,11 +61,15 @@ export function SetPasswordForm() {
 
         <Button
           type="submit"
-          disabled={isExecuting || mismatch || !name.trim() || !password || !confirm}
+          disabled={isExecuting || mismatch || !password || !confirm}
           style={{ width: "100%", marginTop: 2 }}
         >
-          {isExecuting ? "Saving…" : "Set password & continue"}
+          {isExecuting ? "Saving…" : "Save password & sign in"}
         </Button>
+
+        <Link href="/login" className="piq-authlink" style={{ alignSelf: "center" }}>
+          Back to sign in
+        </Link>
       </form>
     </AuthCard>
   );

@@ -74,8 +74,14 @@ export async function proxy(request: NextRequest) {
   const isSetPassword =
     pathname.startsWith("/set-password") ||
     pathname.startsWith("/accept") ||
+    pathname.startsWith("/reset-password") ||
     pathname.startsWith("/complete-profile");
-  const isAuthRoute = pathname.startsWith("/login") || isSetPassword;
+  const isAuthRoute =
+    pathname.startsWith("/login") ||
+    // Signed-out only: someone with a live session has no use for the
+    // reset-request form and is sent on to the dashboard below.
+    pathname.startsWith("/forgot-password") ||
+    isSetPassword;
   const isApiPublic =
     pathname.startsWith("/api/auth/callback") ||
     pathname.startsWith("/api/auth/orphaned") ||

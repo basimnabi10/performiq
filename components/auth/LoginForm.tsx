@@ -2,10 +2,13 @@
 
 import { useAction } from "next-safe-action/hooks";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login } from "@/actions/auth";
+import { AuthCard } from "@/components/auth/AuthCard";
 import { Button } from "@/components/ui/Button";
-import { FrostCard } from "@/components/ui/FrostCard";
+import { Field, PasswordField } from "@/components/ui/Field";
+import { FormError, Notice } from "@/components/ui/FormMessage";
 
 export function LoginForm({ notice }: { notice?: string }) {
   const router = useRouter();
@@ -26,6 +29,7 @@ export function LoginForm({ notice }: { notice?: string }) {
       router.replace(`/accept${hash}`);
     }
   }, [router]);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -35,40 +39,11 @@ export function LoginForm({ notice }: { notice?: string }) {
     result.validationErrors?.password?._errors?.[0];
 
   return (
-    <FrostCard tone="solid" style={{ width: 380, display: "flex", flexDirection: "column", gap: 18 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-        <div
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle at 32% 28%,#ffffff,#8BB0FF 28%,#273FF9 72%,#1C10C9)",
-            boxShadow:
-              "0 5px 12px rgba(39,63,249,.4),inset -2px -3px 6px rgba(14,6,125,.5),inset 2px 2px 6px rgba(255,255,255,.6)",
-          }}
-        />
-        <span className="piq-h2">PerformIQ</span>
-      </div>
-
-      {notice ? (
-        <div
-          style={{
-            display: "flex",
-            gap: 9,
-            padding: "12px 14px",
-            background: "rgba(89,99,146,.10)",
-            border: "1px solid rgba(168,175,203,.4)",
-            borderRadius: 12,
-            fontSize: 12.5,
-            color: "#454D7A",
-            lineHeight: 1.5,
-          }}
-        >
-          <iconify-icon icon="ant-design:info-circle-outlined" width={15} style={{ color: "#596392", flexShrink: 0, marginTop: 1 }} />
-          {notice}
-        </div>
-      ) : null}
+    <AuthCard
+      title="Sign in"
+      blurb="Use your company credentials. We'll take you to the right workspace automatically."
+    >
+      {notice ? <Notice>{notice}</Notice> : null}
 
       <form
         onSubmit={(e) => {
@@ -77,50 +52,44 @@ export function LoginForm({ notice }: { notice?: string }) {
         }}
         style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
-        <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          Email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            style={inputStyle}
-          />
-        </label>
-        <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          Password
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            style={inputStyle}
-          />
-        </label>
+        <Field
+          label="Email address"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          autoFocus
+          placeholder="you@company.com"
+          icon="ant-design:mail-outlined"
+          invalid={Boolean(result.validationErrors?.email)}
+        />
 
-        {error ? (
-          <div className="piq-caption" style={{ color: "#FF5A5F" }}>
-            {error}
-          </div>
-        ) : null}
+        <PasswordField
+          label="Password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          placeholder="••••••••"
+          invalid={Boolean(result.validationErrors?.password)}
+        />
 
-        <Button type="submit" disabled={isExecuting} style={{ width: "100%", marginTop: 4 }}>
+        <FormError>{error}</FormError>
+
+        <Button
+          type="submit"
+          disabled={isExecuting}
+          iconRight={isExecuting ? undefined : "ant-design:arrow-right-outlined"}
+          style={{ width: "100%", marginTop: 2 }}
+        >
           {isExecuting ? "Signing in…" : "Sign in"}
         </Button>
+
+        <Link href="/forgot-password" className="piq-authlink" style={{ alignSelf: "center" }}>
+          Forgot password?
+        </Link>
       </form>
-    </FrostCard>
+    </AuthCard>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,.75)",
-  borderRadius: 11,
-  padding: "10px 14px",
-  fontFamily: "'Switzer',sans-serif",
-  fontSize: 14,
-  background: "rgba(255,255,255,.6)",
-  outline: "none",
-  color: "#181835",
-};

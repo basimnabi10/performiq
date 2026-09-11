@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { FrostCard } from "@/components/ui/FrostCard";
+import { AuthCard } from "@/components/auth/AuthCard";
 
 /**
  * Establishes the session an invite / recovery email carries, then hands off
- * to /set-password.
+ * to the right next step.
  *
  * Supabase can deliver that session three different ways depending on how the
  * link was generated, and only one of them is readable by a server route:
@@ -22,6 +23,9 @@ import { FrostCard } from "@/components/ui/FrostCard";
 export function AcceptInvite() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  // A reset email is a returning user with a name already set; only a genuine
+  // invite should be sent to /set-password, which also asks for one.
+  const [recovery, setRecovery] = useState(false);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -29,6 +33,11 @@ export function AcceptInvite() {
     async function establishSession() {
       const url = new URL(window.location.href);
       const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+
+      // `type` can arrive on either side of the URL depending on the template.
+      const linkType = url.searchParams.get("type") ?? hash.get("type");
+      const isRecovery = linkType === "recovery";
+      setRecovery(isRecovery);
 
       // Supabase reports failures on the fragment too (expired links).
       const hashError = hash.get("error_description") ?? hash.get("error");
@@ -45,10 +54,9 @@ export function AcceptInvite() {
       }
 
       const tokenHash = url.searchParams.get("token_hash");
-      const type = url.searchParams.get("type");
       if (tokenHash) {
         const { error } = await supabase.auth.verifyOtp({
-          type: (type as "invite" | "recovery" | "email") ?? "invite",
+          type: (linkType as "invite" | "recovery" | "email") ?? "invite",
           token_hash: tokenHash,
         });
         return error?.message ?? null;
@@ -63,7 +71,7 @@ export function AcceptInvite() {
       // Nothing in the URL — but an existing session is fine (e.g. a refresh
       // after the tokens were already consumed and stripped).
       const { data } = await supabase.auth.getSession();
-      return data.session ? null : "This invite link is missing its sign-in token.";
+      return data.session ? null : "This link is missing its sign-in token.";
     }
 
     establishSession().then((message) => {
@@ -71,27 +79,45 @@ export function AcceptInvite() {
         setError(message);
         return;
       }
+      const isRecovery =
+        new URL(window.location.href).searchParams.get("type") === "recovery" ||
+        new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery";
       // Strip the tokens from the address bar before moving on.
       window.history.replaceState({}, "", "/accept");
-      router.replace("/set-password");
+      router.replace(isRecovery ? "/reset-password" : "/set-password");
     });
   }, [router]);
 
+  if (error) {
+    return (
+      <AuthCard
+        title="That link didn't work"
+        blurb={
+          recovery
+            ? `${error} Reset links expire after an hour — request a new one to continue.`
+            : `${error} Invite links expire after a while — ask an admin to send you a new one.`
+        }
+      >
+        <Link
+          href={recovery ? "/forgot-password" : "/login"}
+          className="piq-authlink"
+        >
+          {recovery ? "Request a new link" : "Back to sign in"}
+        </Link>
+      </AuthCard>
+    );
+  }
+
   return (
-    <FrostCard tone="solid" style={{ width: 380, display: "flex", flexDirection: "column", gap: 12 }}>
-      <div className="piq-h2">{error ? "That link didn't work" : "Setting up your account…"}</div>
-      {error ? (
-        <>
-          <div className="piq-caption" style={{ lineHeight: 1.55 }}>
-            {error} Invite links expire after a while — ask an admin to send you a new one.
-          </div>
-          <a href="/login" style={{ fontSize: 13, fontWeight: 500, color: "#273FF9", marginTop: 4 }}>
-            Back to sign in
-          </a>
-        </>
-      ) : (
-        <div className="piq-caption">One moment while we verify your invite.</div>
-      )}
-    </FrostCard>
+    <AuthCard
+      title={recovery ? "Verifying your link…" : "Setting up your account…"}
+      blurb={recovery ? "One moment while we check your reset link." : "One moment while we verify your invite."}
+    >
+      <div
+        className="piq-authspinner"
+        role="status"
+        aria-label="Loading"
+      />
+    </AuthCard>
   );
 }
