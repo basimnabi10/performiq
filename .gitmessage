@@ -1,0 +1,14 @@
+# ---------------------------------------------------------------------------
+# Subject: one line, imperative, ~50 chars. "Add X", not "Added X".
+# Finish this sentence: "If applied, this commit will ___"
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Body (optional, wrap at 72). Explain WHY, not what -- the diff already
+# shows what changed. What was broken or missing before? What did you decide
+# and what did you rule out? Anything a teammate would trip over later?
+# ---------------------------------------------------------------------------
+
+
+# Lines starting with # are ignored.
