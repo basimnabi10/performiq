@@ -45,7 +45,7 @@ export default async function TeamsPage() {
         prisma.memberKpiScore.findMany({ where: { cycleId: activeCycle.id, memberId: { in: allMemberIds } } }),
         prisma.review.findMany({ where: { cycleId: activeCycle.id, revieweeId: { in: allMemberIds } } }),
         prisma.kpiTeam.findMany({
-          where: { teamId: { in: teams.map((t) => t.id) }, kpi: { cycleId: activeCycle.id } },
+          where: { teamId: { in: teams.map((t) => t.id) }, kpi: { quarterId: activeCycle.quarterId ?? "" } },
           select: { teamId: true },
         }),
       ])

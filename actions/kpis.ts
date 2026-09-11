@@ -33,7 +33,7 @@ export const createKpi = authActionClient
       for (const tw of parsedInput.teamWeights) {
         await assertWeightBudget(tx, {
           teamId: tw.teamId,
-          cycleId: parsedInput.cycleId,
+          quarterId: parsedInput.quarterId,
           addWeight: tw.weightPct,
         });
       }
@@ -41,7 +41,7 @@ export const createKpi = authActionClient
       const created = await tx.kpi.create({
         data: {
           orgId: actor.orgId,
-          cycleId: parsedInput.cycleId,
+          quarterId: parsedInput.quarterId,
           ownerId: actor.id,
           name: parsedInput.name,
           description: parsedInput.description,
@@ -100,14 +100,14 @@ export const createTeamKpi = authActionClient
 
       await assertWeightBudget(tx, {
         teamId: team.id,
-        cycleId: parsedInput.cycleId,
+        quarterId: parsedInput.quarterId,
         addWeight: parsedInput.weightPct,
       });
 
       const created = await tx.kpi.create({
         data: {
           orgId: actor.orgId,
-          cycleId: parsedInput.cycleId,
+          quarterId: parsedInput.quarterId,
           ownerId: actor.id,
           name: parsedInput.name,
           description: parsedInput.detail,
@@ -141,7 +141,7 @@ export const updateKpiTeamWeight = authActionClient
 
     const kpiTeam = await prisma.kpiTeam.findUnique({
       where: { id: parsedInput.kpiTeamId },
-      include: { kpi: { select: { cycleId: true } } },
+      include: { kpi: { select: { quarterId: true } } },
     });
     if (!kpiTeam) throw new Error("KPI not found on this team.");
     await requireScopeAccess(actor, { teamId: kpiTeam.teamId });
@@ -149,7 +149,7 @@ export const updateKpiTeamWeight = authActionClient
     await prisma.$transaction(async (tx) => {
       await assertWeightBudget(tx, {
         teamId: kpiTeam.teamId,
-        cycleId: kpiTeam.kpi.cycleId,
+        quarterId: kpiTeam.kpi.quarterId,
         addWeight: parsedInput.weightPct,
         excludeKpiId: kpiTeam.kpiId,
       });

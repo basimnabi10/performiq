@@ -23,18 +23,44 @@ async function upsertKpiScores(
   );
 }
 
+/**
+ * Who may still write to a review, and why.
+ *
+ * A submitted review is not frozen: a manager who spots a mistake in their
+ * own wording an hour later should fix it rather than leave a wrong record
+ * standing. So the reviewer keeps write access for as long as the month is
+ * open, and an admin can correct one at any point -- including after the
+ * month closes, which is the only way to fix a genuine error in a finalised
+ * score. Everyone else is read-only.
+ */
+async function assertCanEditReview(
+  review: { reviewerId: string; cycleId: string },
+  actor: { id: string; authRole: string },
+): Promise<void> {
+  if (actor.authRole === "admin") return;
+
+  if (review.reviewerId !== actor.id) {
+    throw new AuthzError("Only the assigned reviewer can edit this review.");
+  }
+
+  const cycle = await prisma.reviewCycle.findUnique({
+    where: { id: review.cycleId },
+    select: { status: true, label: true },
+  });
+  if (cycle?.status === "closed") {
+    throw new Error(
+      `${cycle.label} is closed, so this review can no longer be changed. Ask an admin to reopen the month or correct it for you.`,
+    );
+  }
+}
+
 export const saveReviewDraft = authActionClient
   .schema(saveReviewSchema)
   .action(async ({ parsedInput, ctx }) => {
     const actor = ctx.member;
     const review = await prisma.review.findUnique({ where: { id: parsedInput.reviewId } });
     if (!review) throw new Error("Review not found.");
-    if (review.reviewerId !== actor.id) {
-      throw new AuthzError("Only the assigned reviewer can edit this review.");
-    }
-    if (review.status === "completed") {
-      throw new Error("This review has already been submitted.");
-    }
+    await assertCanEditReview(review, actor);
 
     await upsertKpiScores(parsedInput.reviewId, parsedInput.kpiScores);
     await prisma.review.update({
@@ -51,12 +77,7 @@ export const submitReview = authActionClient
     const actor = ctx.member;
     const review = await prisma.review.findUnique({ where: { id: parsedInput.reviewId } });
     if (!review) throw new Error("Review not found.");
-    if (review.reviewerId !== actor.id) {
-      throw new AuthzError("Only the assigned reviewer can submit this review.");
-    }
-    if (review.status === "completed") {
-      throw new Error("This review has already been submitted.");
-    }
+    await assertCanEditReview(review, actor);
 
     await upsertKpiScores(parsedInput.reviewId, parsedInput.kpiScores);
     await completeReview(parsedInput.reviewId);
@@ -64,7 +85,12 @@ export const submitReview = authActionClient
     await logActivity({
       orgId: actor.orgId,
       actorId: actor.id,
-      verb: review.type === "self" ? "submitted a self-review" : "submitted a review",
+      verb:
+        review.status === "completed"
+          ? "revised a submitted review"
+          : review.type === "self"
+            ? "submitted a self-review"
+            : "submitted a review",
       targetType: "Review",
       targetId: review.id,
       metadata: { revieweeId: review.revieweeId },

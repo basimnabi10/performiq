@@ -16,7 +16,7 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
     include: {
       reviewee: true,
       reviewer: { select: { name: true } },
-      cycle: { select: { label: true } },
+      cycle: { select: { label: true, quarterId: true, status: true } },
       kpiScores: true,
     },
   });
@@ -41,7 +41,7 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
 
   const kpiTeams = review.reviewee.teamId
     ? await prisma.kpiTeam.findMany({
-        where: { teamId: review.reviewee.teamId, kpi: { cycleId: review.cycleId } },
+        where: { teamId: review.reviewee.teamId, kpi: { quarterId: review.cycle.quarterId ?? "" } },
         include: { kpi: true },
       })
     : [];

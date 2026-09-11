@@ -112,6 +112,7 @@ model Organization {
   teams        Team[]
   members      Member[]
   reviewCycles ReviewCycle[]
+  quarters     Quarter[]
   kpis         Kpi[]
   courses      Course[]
   auditLogs    AuditLog[]
@@ -128,6 +129,7 @@ model Department {
   teams        Team[]
   members      Member[]     @relation("DepartmentMembers")
   reviewCycles ReviewCycle[]
+  quarters     Quarter[]
 
   createdAt DateTime @default(now())
 
@@ -144,8 +146,15 @@ model Team {
   leadMemberId String?
   lead         Member?  @relation("TeamLead", fields: [leadMemberId], references: [id])
 
+  /// A team whose department has no HOD can run its own review cycles.
+  /// Explicit rather than inferred from "department has no head", so
+  /// appointing an HOD later does not silently change how a team is reviewed.
+  runsOwnCycles Boolean @default(false)
+
   members  Member[]  @relation("TeamMembers")
   kpiTeams KpiTeam[]
+  quarters Quarter[]
+  reviewCycles ReviewCycle[]
 
   createdAt DateTime @default(now())
 
@@ -219,27 +228,78 @@ model Member {
 // Review cycles, reviews, KPI scoring
 // ---------------------------------------------------------------------------
 
+enum QuarterStatus {
+  planning
+  in_progress
+  closed
+}
+
+/// A calendar quarter (Q1 = Jan-Mar) for one scope: a department, a single
+/// team that runs its own reviews, or the whole org. Holds the three monthly
+/// ReviewCycles beneath it, and owns the KPI set all three months are scored
+/// against -- so targets stay fixed for a quarter instead of being re-entered
+/// every month.
+model Quarter {
+  id           String        @id @default(cuid())
+  orgId        String
+  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  year         Int
+  /// 1-4. Q1 = Jan-Mar.
+  index        Int
+  /// Scope: both null = org-wide; departmentId set = that department;
+  /// teamId set = one team that runs its own cycles.
+  departmentId String?
+  department   Department?   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  teamId       String?
+  team         Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  status       QuarterStatus @default(in_progress)
+  startDate    DateTime
+  endDate      DateTime
+
+  cycles ReviewCycle[]
+  kpis   Kpi[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, year, index, departmentId, teamId])
+  @@index([orgId])
+  @@index([departmentId])
+  @@index([teamId])
+}
+
 model ReviewCycle {
   id           String            @id @default(cuid())
   orgId        String
   org          Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// Display label, e.g. "July 2026". Derived from year/month on create.
   label        String
+  /// The quarter this month sits in.
+  quarterId    String?
+  quarter      Quarter?          @relation(fields: [quarterId], references: [id], onDelete: Cascade)
+  year         Int
+  /// 1-12.
+  month        Int
   departmentId String?
   department   Department?       @relation(fields: [departmentId], references: [id])
+  /// Set when this cycle belongs to a single team rather than a department.
+  teamId       String?
+  team         Team?             @relation(fields: [teamId], references: [id])
   status       ReviewCycleStatus @default(planning)
   startDate    DateTime
   endDate      DateTime
 
   reviews     Review[]
-  assignments ReviewAssignment[]
-  kpis        Kpi[]
+  assignments ReviewAssignment[]
   memberScores MemberKpiScore[]
   snapshots   CycleSnapshot[]
 
   createdAt DateTime @default(now())
 
+  @@unique([orgId, year, month, departmentId, teamId])
   @@index([orgId])
   @@index([departmentId])
+  @@index([teamId])
+  @@index([quarterId])
 }
 
 model Review {
@@ -318,8 +378,10 @@ model Kpi {
   id            String        @id @default(cuid())
   orgId         String
   org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  cycleId       String
-  cycle         ReviewCycle   @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  /// KPIs are owned by a quarter, not a month: the same targets and weights
+  /// apply to all three monthly cycles beneath it.
+  quarterId     String
+  quarter       Quarter       @relation(fields: [quarterId], references: [id], onDelete: Cascade)
   ownerId       String
   owner         Member        @relation(fields: [ownerId], references: [id])
   name          String
@@ -350,7 +412,7 @@ model Kpi {
   updatedAt DateTime @updatedAt
 
   @@index([orgId])
-  @@index([cycleId])
+  @@index([quarterId])
 }
 
 // KPI <-> Team join. Weight lives here (not on Kpi) because the same KPI can

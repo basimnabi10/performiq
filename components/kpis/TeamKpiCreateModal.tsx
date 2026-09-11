@@ -24,12 +24,12 @@ export interface ExistingKpiRow {
 }
 
 export function TeamKpiCreateModal({
-  cycleId,
+  quarterId,
   teamId,
   teamName,
   existingKpis,
 }: {
-  cycleId: string;
+  quarterId: string;
   teamId: string;
   teamName: string;
   existingKpis: ExistingKpiRow[];
@@ -116,7 +116,7 @@ export function TeamKpiCreateModal({
       return;
     }
     execute({
-      cycleId,
+      quarterId,
       teamId,
       name: name.trim(),
       detail: detail.trim() || undefined,

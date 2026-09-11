@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const createKpiSchema = z.object({
-  cycleId: z.string().min(1),
+  quarterId: z.string().min(1),
   name: z.string().trim().min(2, { error: "Enter a KPI name." }).max(80),
   description: z.string().trim().max(500).optional(),
   metricType: z.enum(["number", "percentage", "rating", "currency", "days"]),
@@ -40,7 +40,7 @@ export const updateKpiCurrentSchema = z.object({
 // the weight-budget re-allocation can be committed atomically alongside the
 // new KPI in one transaction.
 export const createTeamKpiSchema = z.object({
-  cycleId: z.string().min(1),
+  quarterId: z.string().min(1),
   teamId: z.string().min(1),
   name: z.string().trim().min(2, { error: "Enter a KPI name." }).max(80),
   detail: z.string().trim().max(200).optional(),

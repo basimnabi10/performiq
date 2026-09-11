@@ -130,10 +130,15 @@ const PM_KPIS: KpiDef[] = [
   { key: "clarity", name: "Requirement clarity", metricType: "percentage", direction: "higher_is_better", targetValue: "≥ 85%", targetNumeric: 85, unit: "percentage", weight: 30 },
 ];
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 const CYCLES = [
-  { key: "q1-2026", label: "Q1 2026", start: dateOf(2026, 1, 1), end: dateOf(2026, 3, 31), status: "closed" as const, completion: 1 },
-  { key: "q2-2026", label: "Q2 2026", start: dateOf(2026, 4, 1), end: dateOf(2026, 6, 30), status: "closed" as const, completion: 1 },
-  { key: "q3-2026", label: "Q3 2026", start: dateOf(2026, 7, 1), end: dateOf(2026, 9, 30), status: "in_progress" as const, completion: 0.65 },
+  { key: "q1-2026", year: 2026, index: 1, label: "Q1 2026", start: dateOf(2026, 1, 1), end: dateOf(2026, 3, 31), status: "closed" as const, completion: 1 },
+  { key: "q2-2026", year: 2026, index: 2, label: "Q2 2026", start: dateOf(2026, 4, 1), end: dateOf(2026, 6, 30), status: "closed" as const, completion: 1 },
+  { key: "q3-2026", year: 2026, index: 3, label: "Q3 2026", start: dateOf(2026, 7, 1), end: dateOf(2026, 9, 30), status: "in_progress" as const, completion: 0.65 },
 ];
 
 const COURSES = [
@@ -291,15 +296,51 @@ async function main() {
     await prisma.member.update({ where: { id: membersByKey.get(def.key)!.id }, data: { managerId } });
   }
 
-  // --- Review cycles + KPIs, one KPI set per cycle per team -----------------
+  // --- Quarters, their monthly cycles, and one KPI set per quarter per team --
+  // KPIs hang off the quarter, so all three of its months score against the
+  // same targets. Reviews are seeded against the quarter's final month.
   const cycleRecords = [];
   for (const c of CYCLES) {
-    const cycle = await prisma.reviewCycle.upsert({
-      where: { id: `seed-cycle-${c.key}` },
+    const quarter = await prisma.quarter.upsert({
+      where: { id: `seed-quarter-${c.key}` },
       update: { status: c.status, startDate: c.start, endDate: c.end },
-      create: { id: `seed-cycle-${c.key}`, orgId: org.id, label: c.label, departmentId: productDept.id, status: c.status, startDate: c.start, endDate: c.end },
+      create: {
+        id: `seed-quarter-${c.key}`,
+        orgId: org.id,
+        year: c.year,
+        index: c.index,
+        departmentId: productDept.id,
+        status: c.status,
+        startDate: c.start,
+        endDate: c.end,
+      },
     });
-    cycleRecords.push({ ...c, id: cycle.id });
+
+    const months = [0, 1, 2].map((offset) => (c.index - 1) * 3 + 1 + offset);
+    let cycle = null;
+    for (const [i, month] of months.entries()) {
+      const monthStart = new Date(Date.UTC(c.year, month - 1, 1));
+      const monthEnd = new Date(Date.UTC(c.year, month, 0, 23, 59, 59, 999));
+      // Within an in-progress quarter, only its final month is still open.
+      const status = c.status === "closed" || i < months.length - 1 ? ("closed" as const) : c.status;
+      cycle = await prisma.reviewCycle.upsert({
+        where: { id: `seed-cycle-${c.key}-m${month}` },
+        update: { status, startDate: monthStart, endDate: monthEnd },
+        create: {
+          id: `seed-cycle-${c.key}-m${month}`,
+          orgId: org.id,
+          quarterId: quarter.id,
+          label: `${MONTH_NAMES[month - 1]} ${c.year}`,
+          year: c.year,
+          month,
+          departmentId: productDept.id,
+          status,
+          startDate: monthStart,
+          endDate: monthEnd,
+        },
+      });
+    }
+    cycleRecords.push({ ...c, id: cycle!.id, quarterId: quarter.id });
 
     for (const [teamKey, defs] of [["design", DESIGN_KPIS] as const, ["pm", PM_KPIS] as const]) {
       const owner = teamKey === "design" ? lea : priya;
@@ -310,7 +351,7 @@ async function main() {
           create: {
             id: `seed-kpi-${c.key}-${teamKey}-${def.key}`,
             orgId: org.id,
-            cycleId: cycle.id,
+            quarterId: quarter.id,
             ownerId: owner.id,
             name: def.name,
             metricType: def.metricType,

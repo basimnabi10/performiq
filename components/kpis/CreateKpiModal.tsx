@@ -25,13 +25,13 @@ export interface CreateKpiTeamOption {
 }
 
 export function CreateKpiModal({
-  cycleId,
+  quarterId,
   teams,
   defaultTeamId,
   variant = "primary",
   size,
 }: {
-  cycleId: string;
+  quarterId: string;
   teams: CreateKpiTeamOption[];
   /** Pre-checked team when the modal opens (e.g. the team-detail page this button lives on). */
   defaultTeamId?: string;
@@ -162,7 +162,7 @@ export function CreateKpiModal({
           onSubmit={(e) => {
             e.preventDefault();
             execute({
-              cycleId,
+              quarterId,
               name,
               description: description || undefined,
               metricType,

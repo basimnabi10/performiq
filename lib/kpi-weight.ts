@@ -9,15 +9,19 @@ type Tx = PrismaClient | Prisma.TransactionClient;
  * this too, but a client check is advisory only. Call inside the same
  * $transaction that writes the KpiTeam row(s) so the read-then-write is
  * atomic under concurrent edits.
+ *
+ * The budget is per QUARTER, not per month: one set of weights covers all
+ * three monthly cycles beneath it, so a team's KPIs are agreed once a
+ * quarter rather than re-argued every month.
  */
 export async function assertWeightBudget(
   tx: Tx,
-  args: { teamId: string; cycleId: string; addWeight: number; excludeKpiId?: string },
+  args: { teamId: string; quarterId: string; addWeight: number; excludeKpiId?: string },
 ): Promise<void> {
   const rows = await tx.kpiTeam.findMany({
     where: {
       teamId: args.teamId,
-      kpi: { cycleId: args.cycleId },
+      kpi: { quarterId: args.quarterId },
       ...(args.excludeKpiId ? { kpiId: { not: args.excludeKpiId } } : {}),
     },
     select: { weightPct: true },
@@ -28,7 +32,7 @@ export async function assertWeightBudget(
 
   if (total > 100) {
     throw new Error(
-      `This would put the team's KPI weight budget at ${total}% for this cycle (max 100%, currently ${existing}%).`,
+      `This would put the team's KPI weight budget at ${total}% for this quarter (max 100%, currently ${existing}%).`,
     );
   }
 }

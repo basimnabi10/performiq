@@ -6,7 +6,7 @@ import { cycleScopeWhere } from "@/lib/cycles";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
-import { StartCycleModal } from "@/components/cycles/StartCycleModal";
+import { OpenCycleModal } from "@/components/cycles/OpenCycleModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CloseCycleModal } from "@/components/cycles/CloseCycleModal";
 import { CreateKpiModal } from "@/components/kpis/CreateKpiModal";
@@ -114,7 +114,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
               body="Start a cycle to generate self- and manager-review shells for everyone in scope. KPIs are then created against that cycle."
             />
             <div>
-              <StartCycleModal departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined} />
+              <OpenCycleModal departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined} />
             </div>
           </>
         )}
@@ -136,7 +136,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
   const [kpis, memberKpiScores, reviews, learningAssignments, courses, lessonRequests, moodCheckins, auditLogs] =
     await Promise.all([
       prisma.kpi.findMany({
-        where: { cycleId: activeCycle.id, kpiTeams: { some: { teamId: { in: scopeTeamIds } } } },
+        where: { quarterId: activeCycle.quarterId ?? "", kpiTeams: { some: { teamId: { in: scopeTeamIds } } } },
         include: { kpiTeams: { where: { teamId: { in: scopeTeamIds } } } },
       }),
       prisma.memberKpiScore.findMany({ where: { cycleId: activeCycle.id, memberId: { in: memberIds } } }),
@@ -433,7 +433,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             {activeCycle.label} · {daysToEnd} days left
           </span>
           <CloseCycleModal cycleId={activeCycle.id} cycleLabel={activeCycle.label} size="header" />
-          <StartCycleModal
+          <OpenCycleModal
             departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
             size="header"
           />
@@ -465,7 +465,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             size="header"
             canGrantAdmin={actor.authRole === "admin"}
           />
-          <StartCycleModal
+          <OpenCycleModal
             departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
             variant="secondary"
             icon="ant-design:reload-outlined"
@@ -478,7 +478,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           </Link>
           {canCreateKpi ? (
             <CreateKpiModal
-              cycleId={activeCycle.id}
+              quarterId={activeCycle.quarterId ?? ""}
               teams={teamsToShow.map((t, i) => ({
                 id: t.id,
                 name: t.name,

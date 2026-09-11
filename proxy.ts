@@ -85,7 +85,10 @@ export async function proxy(request: NextRequest) {
   const isApiPublic =
     pathname.startsWith("/api/auth/callback") ||
     pathname.startsWith("/api/auth/orphaned") ||
-    pathname.startsWith("/api/health");
+    pathname.startsWith("/api/health") ||
+    // Scheduled cycle opener. It authenticates itself with CRON_SECRET, and
+    // has no session to redirect to a login page.
+    pathname.startsWith("/api/cron/");
   const isPublic = isAuthRoute || isApiPublic;
 
   if (!data.user && !isPublic) {
