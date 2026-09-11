@@ -7,6 +7,7 @@ import { actionClient } from "@/lib/safe-action";
 import { checkRateLimit, loginRateLimit, passwordResetRateLimit } from "@/lib/rateLimit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getAppBaseUrl } from "@/lib/app-url";
 
 const loginSchema = z.object({
   email: z.email({ error: "Enter a valid email address." }),
@@ -62,9 +63,11 @@ export const requestPasswordReset = actionClient
     await checkRateLimit(passwordResetRateLimit, `${await clientIp()}:${email}`);
 
     const supabase = await createSupabaseServerClient();
-    const origin = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    // Same resolution the invite flow uses: NEXT_PUBLIC_APP_URL is ignored
+    // when it points at localhost on a deployed host, so a stale local value
+    // in the environment can not send real users to their own machine.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/accept?type=recovery`,
+      redirectTo: `${await getAppBaseUrl()}/accept?type=recovery`,
     });
     if (error) {
       console.error("Supabase reset-password-email error:", error.status, error.message);
