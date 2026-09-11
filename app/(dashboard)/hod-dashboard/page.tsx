@@ -82,23 +82,46 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
   // Every figure on this page is read against one cycle, so resolving the
   // selection once here is what keeps the stat cards, tables and charts
   // describing the same month.
-  const requestedCycle = monthParam
-    ? cycleHistory.find((c) => `${c.year}-${String(c.month).padStart(2, "0")}` === monthParam)
-    : undefined;
-  const activeCycle = requestedCycle ?? runningCycle ?? cycleHistory[cycleHistory.length - 1] ?? null;
-  const isViewingPastMonth = activeCycle != null && activeCycle.id !== runningCycle?.id;
+  const monthKeyOf = (c: { year: number; month: number }) => `${c.year}-${String(c.month).padStart(2, "0")}`;
 
-  const monthOptions: MonthOption[] = [...cycleHistory]
-    .reverse()
-    .map((c) => ({
-      key: `${c.year}-${String(c.month).padStart(2, "0")}`,
-      label: c.label,
-      status: c.status,
-      daysLeft: c.status === "in_progress" ? daysUntil(c.endDate) : undefined,
-    }));
-  const selectedMonthKey = activeCycle
-    ? `${activeCycle.year}-${String(activeCycle.month).padStart(2, "0")}`
-    : "";
+  // A month is one row in the picker even when several cycles share it: each
+  // department (and each team running its own reviews) has its own cycle for
+  // the same period, so an admin looking across four departments would
+  // otherwise see "September 2026" four times over.
+  const monthOptions: MonthOption[] = [];
+  for (const c of [...cycleHistory].reverse()) {
+    const key = monthKeyOf(c);
+    const existing = monthOptions.find((m) => m.key === key);
+    if (!existing) {
+      monthOptions.push({
+        key,
+        label: c.label,
+        status: c.status,
+        daysLeft: c.status === "in_progress" ? daysUntil(c.endDate) : undefined,
+      });
+      continue;
+    }
+    // Mixed statuses across scopes: the month is still running if any of its
+    // cycles is.
+    if (c.status === "in_progress" && existing.status !== "in_progress") {
+      existing.status = "in_progress";
+      existing.daysLeft = daysUntil(c.endDate);
+    }
+  }
+
+  const selectedMonthKey =
+    (monthParam && monthOptions.some((m) => m.key === monthParam) ? monthParam : undefined) ??
+    (runningCycle ? monthKeyOf(runningCycle) : undefined) ??
+    monthOptions[0]?.key ??
+    "";
+
+  // Every cycle covering the selected month, across all scopes in view. The
+  // page reads from the set, not from one of them, so an admin sees the whole
+  // organization for that month rather than whichever department sorted first.
+  const monthCycles = cycleHistory.filter((c) => monthKeyOf(c) === selectedMonthKey);
+  const monthCycleIds = monthCycles.map((c) => c.id);
+  const activeCycle = monthCycles.find((c) => c.status === "in_progress") ?? monthCycles[0] ?? null;
+  const isViewingPastMonth = activeCycle != null && !monthCycles.some((c) => c.status === "in_progress");
 
   if (!activeCycle) {
     // Setting up from scratch has an order to it: a cycle with no teams or
@@ -158,9 +181,9 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
         where: { quarterId: activeCycle.quarterId ?? "", kpiTeams: { some: { teamId: { in: scopeTeamIds } } } },
         include: { kpiTeams: { where: { teamId: { in: scopeTeamIds } } } },
       }),
-      prisma.memberKpiScore.findMany({ where: { cycleId: activeCycle.id, memberId: { in: memberIds } } }),
+      prisma.memberKpiScore.findMany({ where: { cycleId: { in: monthCycleIds }, memberId: { in: memberIds } } }),
       prisma.review.findMany({
-        where: { cycleId: activeCycle.id, revieweeId: { in: memberIds } },
+        where: { cycleId: { in: monthCycleIds }, revieweeId: { in: memberIds } },
       }),
       prisma.learningAssignment.findMany({ where: { memberId: { in: memberIds } } }),
       prisma.course.count({ where: { orgId: actor.orgId, status: "published" } }),
@@ -457,32 +480,6 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
               })),
             ]}
           />
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              height: 50,
-              fontSize: 14,
-              fontWeight: 500,
-              padding: "0 18px",
-              borderRadius: 16,
-              color: "#273FF9",
-              background: "rgba(58,99,250,.13)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: isViewingPastMonth ? "#A8AFCB" : "#273FF9",
-                boxShadow: isViewingPastMonth ? "none" : "0 0 0 3px rgba(39,63,249,.18)",
-              }}
-            />
-            {activeCycle.label} · {isViewingPastMonth ? "closed" : `${daysToEnd} days left`}
-          </span>
           <MonthPicker months={monthOptions} selectedKey={selectedMonthKey} />
         </div>
       </div>
