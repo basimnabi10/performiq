@@ -429,3 +429,27 @@ iconify-icon {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* Sidebar nav scroll area — the bar only appears when the menu actually
+   overflows, and stays quiet against the frosted panel. */
+.piq-sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 175, 203, 0.5) transparent;
+}
+
+.piq-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.piq-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.piq-sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(168, 175, 203, 0.45);
+  border-radius: 999px;
+}
+
+.piq-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(118, 127, 165, 0.6);
+}

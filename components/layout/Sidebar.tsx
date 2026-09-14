@@ -54,7 +54,16 @@ export function Sidebar({
         borderRight: "1px solid rgba(255,255,255,.5)",
         WebkitBackdropFilter: "blur(35px)",
         backdropFilter: "blur(35px)",
-        minHeight: "100vh",
+        // Sticky rather than min-height: the sidebar sits in a flex row, so a
+        // min-height stretches it to match a long page and the profile block
+        // (marginTop: auto) lands at the bottom of the document instead of the
+        // screen -- you had to scroll the whole dashboard to reach your own
+        // account. Pinning it to one viewport keeps the profile in view, and
+        // the nav scrolls inside it when a role has more sections than fit.
+        position: "sticky",
+        top: 0,
+        height: "100vh",
+        overflow: "hidden",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "4px 8px" }}>
@@ -121,7 +130,21 @@ export function Sidebar({
         </div>
       </div>
 
-      {sections.map((section) => (
+      {/* The nav scrolls on its own. Without this, a role with many sections
+          makes the whole sidebar scroll and the account block at the bottom
+          drifts out of view. */}
+      <div
+        className="piq-sidebar-nav"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+        }}
+      >
+        {sections.map((section) => (
         <div key={section.label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <div
             style={{
@@ -165,10 +188,11 @@ export function Sidebar({
               </Link>
             );
           })}
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
 
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ paddingTop: 8, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
         {switchViewHref ? (
           <Link
             href={switchViewHref}
