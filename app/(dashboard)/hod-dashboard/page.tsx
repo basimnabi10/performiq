@@ -6,7 +6,6 @@ import { cycleScopeWhere } from "@/lib/cycles";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
-import { StartReviewModal } from "@/components/reviews/StartReviewModal";
 import { MonthPicker, type MonthOption } from "@/components/cycles/MonthPicker";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CreateKpiModal } from "@/components/kpis/CreateKpiModal";
@@ -510,13 +509,11 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             size="header"
             canGrantAdmin={actor.authRole === "admin"}
           />
-          <StartReviewModal
-            cycleId={activeCycle.id}
-            members={members.map((m) => ({ id: m.id, name: m.name, managerId: m.managerId }))}
-            actorId={actor.id}
-            variant="secondary"
-            size="header"
-          />
+          <Link href="/kpi-review" style={{ textDecoration: "none" }}>
+            <Button variant="secondary" icon="ant-design:form-outlined" size="header">
+              Start review
+            </Button>
+          </Link>
           <Link href="/learning" style={{ textDecoration: "none" }}>
             <Button variant="secondary" icon="ant-design:read-outlined" size="header">
               Assign learning

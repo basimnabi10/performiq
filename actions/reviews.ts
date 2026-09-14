@@ -6,7 +6,13 @@ import { AuthzError, requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { completeReview } from "@/lib/scoring";
 import { logActivity } from "@/lib/audit";
-import { assignReviewerSchema, saveReviewSchema, startReviewSchema } from "@/lib/validation/reviews.schema";
+import { redirect } from "next/navigation";
+import {
+  assignReviewerSchema,
+  openMemberReviewSchema,
+  saveReviewSchema,
+  startReviewSchema,
+} from "@/lib/validation/reviews.schema";
 
 async function upsertKpiScores(
   reviewId: string,
@@ -195,4 +201,52 @@ export const startReview = authActionClient
 
     revalidatePath("/reviews");
     return { reviewId: review.id };
+  });
+
+/**
+ * Entry point for the team -> member -> review flow: opens the review the
+ * current person should be filling in for someone, creating it if it does not
+ * exist yet.
+ *
+ * Reviews are generated as shells when a month opens, but only for the
+ * member themself (self) and their manager. Someone senior reviewing outside
+ * that line -- an HOD covering for an absent manager, an admin correcting a
+ * gap -- has no shell waiting, and a "Review now" button that dead-ends is
+ * worse than one that creates the review it promises.
+ */
+export const openMemberReview = authActionClient
+  .schema(openMemberReviewSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod", "manager"]);
+
+    const reviewee = await prisma.member.findUnique({ where: { id: parsedInput.memberId } });
+    if (!reviewee || reviewee.orgId !== actor.orgId) throw new Error("Member not found.");
+    await requireScopeAccess(actor, { teamId: reviewee.teamId, departmentId: reviewee.departmentId });
+
+    if (reviewee.id === actor.id) {
+      throw new Error("Use your own dashboard to complete your self-review.");
+    }
+
+    const review = await prisma.review.upsert({
+      where: {
+        cycleId_revieweeId_reviewerId_type: {
+          cycleId: parsedInput.cycleId,
+          revieweeId: reviewee.id,
+          reviewerId: actor.id,
+          type: "manager",
+        },
+      },
+      create: {
+        cycleId: parsedInput.cycleId,
+        revieweeId: reviewee.id,
+        reviewerId: actor.id,
+        type: "manager",
+        status: "pending",
+      },
+      update: {},
+    });
+
+    revalidatePath("/reviews");
+    redirect(`/reviews/${review.id}`);
   });
