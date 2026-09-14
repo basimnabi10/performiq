@@ -103,8 +103,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         name={member.name}
         role={ROLE_LABEL[member.authRole] ?? member.authRole}
         sections={sections}
-        switchViewHref={isManager ? "/my-dashboard" : undefined}
-        switchViewLabel="Switch to member view"
+        avatarUrl={member.avatarUrl}
       />
       <main style={{ flex: 1, minWidth: 0, padding: "26px 30px", display: "flex", flexDirection: "column", gap: 24 }}>
         {children}

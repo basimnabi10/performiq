@@ -24,8 +24,8 @@ export interface SidebarProps {
   name: string;
   role: string;
   sections: NavSection[];
-  switchViewHref?: string;
-  switchViewLabel?: string;
+  /** Profile photo for the account block. */
+  avatarUrl?: string | null;
 }
 
 export function Sidebar({
@@ -36,8 +36,7 @@ export function Sidebar({
   name,
   role,
   sections,
-  switchViewHref,
-  switchViewLabel,
+  avatarUrl,
 }: SidebarProps) {
   const pathname = usePathname();
 
@@ -193,27 +192,6 @@ export function Sidebar({
       </div>
 
       <div style={{ paddingTop: 8, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-        {switchViewHref ? (
-          <Link
-            href={switchViewHref}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              padding: "10px 12px",
-              borderRadius: 12,
-              background: "rgba(255,255,255,.45)",
-              border: "1px dashed rgba(168,175,203,.55)",
-              fontSize: 12,
-              color: "#596392",
-              textDecoration: "none",
-            }}
-          >
-            <iconify-icon icon="ant-design:swap-outlined" width="15" style={{ color: "#273FF9" }} />
-            {switchViewLabel}
-          </Link>
-        ) : null}
-
         <div
           style={{
             display: "flex",
@@ -225,7 +203,7 @@ export function Sidebar({
             border: "1px solid rgba(255,255,255,.6)",
           }}
         >
-          <Avatar name={name} size={38} />
+          <Avatar name={name} src={avatarUrl} size={38} round />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{
