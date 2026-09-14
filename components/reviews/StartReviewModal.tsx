@@ -23,9 +23,14 @@ export function StartReviewModal({
   cycleId,
   members,
   actorId,
+  variant = "primary",
+  size,
 }: {
   cycleId: string;
   members: MemberOption[];
+  /** Match the surrounding row — the dashboard's quick actions are secondary. */
+  variant?: "primary" | "secondary";
+  size?: "sm" | "md" | "lg" | "header";
   /** The person clicking "Start review" — defaults the reviewer to them, since
    * that's who's most likely conducting it (an admin/HOD/manager reviewing a
    * direct report themselves), rather than an arbitrary or wrong member. */
@@ -54,7 +59,7 @@ export function StartReviewModal({
 
   if (!open) {
     return (
-      <Button icon="ant-design:plus-outlined" onClick={() => setOpen(true)}>
+      <Button icon="ant-design:plus-outlined" variant={variant} size={size} onClick={() => setOpen(true)}>
         Start review
       </Button>
     );

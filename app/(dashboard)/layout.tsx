@@ -50,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           label: "Performance",
           items: [
             { href: "/kpis", label: "KPIs", icon: "ant-design:bar-chart-outlined" },
+            { href: "/performance", label: "Performance", icon: "ant-design:trophy-outlined" },
             { href: "/analytics", label: "Analytics", icon: "ant-design:line-chart-outlined" },
             { href: "/learning", label: "Learning", icon: "ant-design:read-outlined" },
           ],
@@ -74,7 +75,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {
             label: "Performance",
             items: [
-              { href: "/analytics", label: "Analytics", icon: "ant-design:line-chart-outlined" },
+              { href: "/performance", label: "Performance", icon: "ant-design:trophy-outlined" },
+            { href: "/analytics", label: "Analytics", icon: "ant-design:line-chart-outlined" },
               { href: "/learning", label: "Learning", icon: "ant-design:read-outlined" },
             ],
           },

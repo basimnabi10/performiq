@@ -6,6 +6,7 @@ import { cycleScopeWhere } from "@/lib/cycles";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
+import { StartReviewModal } from "@/components/reviews/StartReviewModal";
 import { MonthPicker, type MonthOption } from "@/components/cycles/MonthPicker";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CreateKpiModal } from "@/components/kpis/CreateKpiModal";
@@ -509,6 +510,13 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             size="header"
             canGrantAdmin={actor.authRole === "admin"}
           />
+          <StartReviewModal
+            cycleId={activeCycle.id}
+            members={members.map((m) => ({ id: m.id, name: m.name, managerId: m.managerId }))}
+            actorId={actor.id}
+            variant="secondary"
+            size="header"
+          />
           <Link href="/learning" style={{ textDecoration: "none" }}>
             <Button variant="secondary" icon="ant-design:read-outlined" size="header">
               Assign learning
@@ -529,9 +537,22 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
               size="header"
             />
           ) : null}
-          <Button variant="secondary" icon="ant-design:download-outlined" size="header" disabled>
-            Export report
-          </Button>
+          <Link
+            href={`/performance?month=${selectedMonthKey}${selectedTeam ? `&team=${selectedTeam.id}` : ""}`}
+            style={{ textDecoration: "none" }}
+          >
+            <Button variant="secondary" icon="ant-design:trophy-outlined" size="header">
+              All performance by KPI
+            </Button>
+          </Link>
+          <a
+            href={`/api/export/report?month=${selectedMonthKey}${selectedTeam ? `&team=${selectedTeam.id}` : ""}`}
+            style={{ textDecoration: "none" }}
+          >
+            <Button variant="secondary" icon="ant-design:download-outlined" size="header">
+              Export report
+            </Button>
+          </a>
         </div>
 
         <div style={{ gridColumn: "span 6", fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>

@@ -457,3 +457,61 @@ iconify-icon {
 .piq-sidebar-nav::-webkit-scrollbar-thumb:hover {
   background: rgba(118, 127, 165, 0.6);
 }
+
+/* ---------------------------------------------------------------------------
+ * Performance-by-KPI matrix and filter chips.
+ * ------------------------------------------------------------------------- */
+
+.piq-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 12.5px;
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.piq-chip:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.piq-chip.is-active {
+  background: linear-gradient(135deg, #3a63fa, #273ff9);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(39, 63, 249, 0.3);
+}
+
+.piq-matrix-head {
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.75);
+  border-bottom: 1px solid rgba(168, 175, 203, 0.28);
+  white-space: nowrap;
+}
+
+.piq-matrix-cell {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(168, 175, 203, 0.18);
+  vertical-align: middle;
+}
+
+/* The member column stays put while the KPI columns scroll — losing track of
+   whose row you are reading defeats the comparison the table exists for. */
+.piq-matrix-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.94);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 1px 0 0 rgba(168, 175, 203, 0.25);
+}
