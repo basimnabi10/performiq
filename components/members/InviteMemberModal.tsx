@@ -95,7 +95,9 @@ export function InviteMemberModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(24,24,53,.35)",
+        background: "rgba(24,24,53,.55)",
+        WebkitBackdropFilter: "blur(3px)",
+        backdropFilter: "blur(3px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -105,7 +107,7 @@ export function InviteMemberModal({
       onClick={close}
     >
       <FrostCard
-        tone="solid"
+        tone="modal"
         style={{ width: 500, maxHeight: "88vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}
         onClick={(e) => e.stopPropagation()}
       >

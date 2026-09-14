@@ -36,7 +36,9 @@ export function CreateTeamModal({ departments }: { departments: { id: string; na
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(24,24,53,.35)",
+        background: "rgba(24,24,53,.55)",
+        WebkitBackdropFilter: "blur(3px)",
+        backdropFilter: "blur(3px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -49,7 +51,7 @@ export function CreateTeamModal({ departments }: { departments: { id: string; na
       }}
     >
       <FrostCard
-        tone="solid"
+        tone="modal"
         style={{ width: 380, display: "flex", flexDirection: "column", gap: 14 }}
         onClick={(e) => e.stopPropagation()}
       >

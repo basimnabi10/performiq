@@ -66,7 +66,7 @@ export function DesignationModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(24,24,53,.42)",
+        background: "rgba(24,24,53,.55)",
         WebkitBackdropFilter: "blur(3px)",
         backdropFilter: "blur(3px)",
         display: "flex",

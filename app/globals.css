@@ -165,7 +165,11 @@
 }
 .piq-caption {
   font: var(--weight-regular) var(--text-caption) / var(--leading-snug) var(--font-sans);
-  color: var(--text-tertiary);
+  /* Was --text-tertiary (#767FA5), which lands around 3.2:1 on the frosted
+     surfaces this app uses -- under the 4.5:1 minimum, and captions carry
+     field labels and helper text, not decoration. --text-secondary keeps the
+     same muted role while clearing the threshold. */
+  color: var(--text-secondary);
 }
 .piq-num {
   font-variant-numeric: tabular-nums;

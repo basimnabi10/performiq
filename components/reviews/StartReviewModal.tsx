@@ -65,7 +65,9 @@ export function StartReviewModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(24,24,53,.35)",
+        background: "rgba(24,24,53,.55)",
+        WebkitBackdropFilter: "blur(3px)",
+        backdropFilter: "blur(3px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -78,7 +80,7 @@ export function StartReviewModal({
       }}
     >
       <FrostCard
-        tone="solid"
+        tone="modal"
         style={{ width: 420, display: "flex", flexDirection: "column", gap: 14 }}
         onClick={(e) => e.stopPropagation()}
       >

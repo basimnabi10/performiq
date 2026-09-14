@@ -1,8 +1,8 @@
 import * as React from "react";
 
 export interface FrostCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** frost = signature translucent glass (default); solid = higher-opacity glass; ink = dark accent cell. */
-  tone?: "frost" | "solid" | "ink";
+  /** frost = signature translucent glass (default); solid = higher-opacity glass; modal = opaque enough to read over page content; ink = dark accent cell. */
+  tone?: "frost" | "solid" | "modal" | "ink";
   /** Inner padding in px. Default 22. */
   padding?: number;
   /** Corner radius in px. Default 24. */
@@ -24,6 +24,17 @@ const TONES: Record<string, React.CSSProperties> = {
     WebkitBackdropFilter: "blur(30px) saturate(140%)",
     backdropFilter: "blur(30px) saturate(140%)",
     boxShadow: "0 8px 24px rgba(0,0,0,.06)",
+  },
+  // Same glass, but opaque enough that what is behind it reads as light and
+  // shadow rather than as words. A dialog sits ON TOP of a busy dashboard,
+  // so at "solid" opacity the page's own headings and dark panels show
+  // through the form and compete with its labels.
+  modal: {
+    background: "rgba(255,255,255,.94)",
+    border: "1px solid rgba(255,255,255,.9)",
+    WebkitBackdropFilter: "blur(40px) saturate(150%)",
+    backdropFilter: "blur(40px) saturate(150%)",
+    boxShadow: "0 24px 60px rgba(24,24,53,.28)",
   },
   ink: {
     background: "linear-gradient(150deg,#2C3158,#181835)",
