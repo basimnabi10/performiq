@@ -14,7 +14,7 @@ export function TeamSelect({
   const router = useRouter();
 
   return (
-    <select
+    <select className="piq-select"
       value={selectedId}
       onChange={(e) => router.push(e.target.value === "all" ? basePath : `${basePath}?team=${e.target.value}`)}
       style={{

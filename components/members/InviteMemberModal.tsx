@@ -194,7 +194,7 @@ export function InviteMemberModal({
             ) : (
               <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 Team
-                <select value={teamId} onChange={(e) => setTeamId(e.target.value)} style={selectStyle} required>
+                <select className="piq-select" value={teamId} onChange={(e) => setTeamId(e.target.value)} style={selectStyle} required>
                   {teams.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}

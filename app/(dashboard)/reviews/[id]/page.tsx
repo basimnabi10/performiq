@@ -86,7 +86,13 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
           before scoring this review.
         </div>
       ) : (
-        <ReviewForm reviewId={review.id} kpis={kpis} readOnly={readOnly} readOnlyReason={readOnlyReason} />
+        <ReviewForm
+          reviewId={review.id}
+          kpis={kpis}
+          readOnly={readOnly}
+          readOnlyReason={readOnlyReason}
+          returnTo={review.reviewee.teamId ? `/kpi-review/${review.reviewee.teamId}` : undefined}
+        />
       )}
     </div>
   );

@@ -58,7 +58,7 @@ export function ReviewsFilterBar({
           />
         </form>
 
-        <select
+        <select className="piq-select"
           value={searchParams.get("team") ?? ""}
           onChange={(e) => pushWith({ team: e.target.value || null })}
           style={selectStyle}
@@ -71,7 +71,7 @@ export function ReviewsFilterBar({
           ))}
         </select>
 
-        <select
+        <select className="piq-select"
           value={searchParams.get("status") ?? ""}
           onChange={(e) => pushWith({ status: e.target.value || null })}
           style={selectStyle}
@@ -110,7 +110,7 @@ export function ReviewsFilterBar({
           })}
         </div>
 
-        <select
+        <select className="piq-select"
           value={searchParams.get("sort") ?? "recent"}
           onChange={(e) => pushWith({ sort: e.target.value === "recent" ? null : e.target.value })}
           style={selectStyle}

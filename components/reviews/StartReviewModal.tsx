@@ -118,7 +118,7 @@ export function StartReviewModal({
           </label>
           <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             Reviewee
-            <select value={revieweeId} onChange={(e) => selectReviewee(e.target.value)} style={inputStyle}>
+            <select className="piq-select" value={revieweeId} onChange={(e) => selectReviewee(e.target.value)} style={inputStyle}>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
@@ -129,7 +129,7 @@ export function StartReviewModal({
           {type !== "self" ? (
             <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               Reviewer {reviewerId === actorId ? "(defaults to you)" : ""}
-              <select value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} style={inputStyle}>
+              <select className="piq-select" value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} style={inputStyle}>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.id === actorId ? `${m.name} (you)` : m.name}

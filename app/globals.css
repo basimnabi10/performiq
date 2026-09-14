@@ -515,3 +515,120 @@ iconify-icon {
   backdrop-filter: blur(20px);
   box-shadow: 1px 0 0 rgba(168, 175, 203, 0.25);
 }
+
+/* ---------------------------------------------------------------------------
+ * Dropdowns — one shape for every picker and select in the product, so a
+ * control that filters a list looks the same wherever it appears.
+ * ------------------------------------------------------------------------- */
+
+.piq-dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  color: var(--text-strong);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.piq-dropdown:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.piq-dropdown[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(58, 99, 250, 0.45);
+}
+
+.piq-dropdown:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.piq-dropdown-meta {
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+}
+
+.piq-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 42;
+  min-width: 200px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 24px;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  backdrop-filter: blur(40px) saturate(150%);
+  box-shadow: 0 20px 50px rgba(24, 24, 53, 0.22);
+}
+
+.piq-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  text-align: left;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.piq-dropdown-item:hover {
+  background: rgba(39, 63, 249, 0.07);
+}
+
+.piq-dropdown-item.is-active {
+  background: rgba(39, 63, 249, 0.1);
+}
+
+.piq-dropdown-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Native <select>s get the same shape, with a drawn chevron since the OS one
+   cannot be styled. */
+.piq-select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 46px;
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  background-color: rgba(255, 255, 255, 0.6);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23596392' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.piq-select:focus-visible {
+  outline: none;
+  border-color: rgba(58, 99, 250, 0.45);
+  box-shadow: var(--focus-ring);
+}

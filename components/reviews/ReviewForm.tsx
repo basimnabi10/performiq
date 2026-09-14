@@ -1,6 +1,7 @@
 "use client";
 
 import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { saveReviewDraft, submitReview } from "@/actions/reviews";
 import { Button } from "@/components/ui/Button";
@@ -38,10 +39,14 @@ export function ReviewForm({
   kpis,
   readOnly,
   readOnlyReason,
+  returnTo,
 }: {
   reviewId: string;
   kpis: ReviewFormKpi[];
   readOnly: boolean;
+  /** Where to go once the review is saved or submitted — the member list the
+   * reviewer is working through. */
+  returnTo?: string;
   /** Why the form can't be edited — without this a read-only form just looks
    * broken: the rating buttons silently do nothing and the submit button is
    * gone, with no explanation of either. */
@@ -54,8 +59,21 @@ export function ReviewForm({
     Object.fromEntries(kpis.map((k) => [k.kpiId, k.initialComment ?? ""])),
   );
 
-  const draftAction = useAction(saveReviewDraft);
-  const submitAction = useAction(submitReview);
+  const router = useRouter();
+
+  // Saving or submitting returns to wherever the review was opened from --
+  // the reviewer is working through a list of people, and leaving them
+  // parked on a finished form means navigating back by hand for every one.
+  // Without a return path (a review opened from a link or the flat list),
+  // stay put: sending someone to a team page they did not come from would
+  // be its own kind of lost.
+  const goBack = () => {
+    if (returnTo) router.push(returnTo);
+    else router.refresh();
+  };
+
+  const draftAction = useAction(saveReviewDraft, { onSuccess: goBack });
+  const submitAction = useAction(submitReview, { onSuccess: goBack });
 
   const weightedScore = useMemo(() => {
     let weightedSum = 0;

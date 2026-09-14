@@ -5,8 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { findActiveCycle } from "@/lib/cycles";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FrostCard } from "@/components/ui/FrostCard";
-import { ReviewMemberRow } from "@/components/reviews/ReviewMemberRow";
+import { ReviewMemberCard } from "@/components/reviews/ReviewMemberCard";
 
 /**
  * Step two: the people on the chosen team, and where each one's review stands.
@@ -121,11 +120,11 @@ export default async function KpiReviewTeamPage({ params }: PageProps<"/kpi-revi
           actionLabel="Invite members"
         />
       ) : (
-        <FrostCard tone="solid" padding={0} style={{ overflow: "hidden" }}>
-          {rows.map((r, i) => (
-            <ReviewMemberRow key={r.memberId} row={r} cycleId={cycle.id} isFirst={i === 0} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(330px,1fr))", gap: 16 }}>
+          {rows.map((r) => (
+            <ReviewMemberCard key={r.memberId} row={r} cycleId={cycle.id} />
           ))}
-        </FrostCard>
+        </div>
       )}
     </div>
   );

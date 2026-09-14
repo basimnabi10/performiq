@@ -50,23 +50,11 @@ export function ScopePicker({
         />
       ) : null}
       <button
+        className="piq-dropdown"
+        aria-expanded={open}
+        aria-haspopup="listbox"
         onClick={() => setOpen((o) => !o)}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 10,
-          height: 50,
-          padding: "0 16px",
-          borderRadius: 16,
-          background: open ? "rgba(255,255,255,.92)" : "rgba(255,255,255,.75)",
-          border: open ? "1.5px solid rgba(58,99,250,.4)" : "1.5px solid rgba(255,255,255,.8)",
-          boxShadow: "0 6px 18px rgba(70,100,190,.1)",
-          cursor: "pointer",
-          position: "relative",
-          zIndex: 41,
-          WebkitBackdropFilter: "blur(24px)",
-          backdropFilter: "blur(24px)",
-        }}
+        style={{ position: "relative", zIndex: 41 }}
       >
         <span
           style={{
@@ -77,27 +65,13 @@ export function ScopePicker({
             flexShrink: 0,
           }}
         />
-        <span style={{ fontSize: 15, fontWeight: 500, color: "#181835", whiteSpace: "nowrap" }}>{selected?.label ?? "All teams"}</span>
-        <span style={{ fontSize: 12, color: "#767FA5", whiteSpace: "nowrap" }}>{selected?.meta}</span>
+        <span style={{ whiteSpace: "nowrap" }}>{selected?.label ?? "All teams"}</span>
+        <span className="piq-dropdown-meta" style={{ whiteSpace: "nowrap" }}>{selected?.meta}</span>
         <iconify-icon icon="ant-design:down-outlined" width="13" style={{ color: "#767FA5" }} />
       </button>
 
       {open ? (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            right: 0,
-            width: 308,
-            zIndex: 42,
-            background: "rgba(255,255,255,.96)",
-            WebkitBackdropFilter: "blur(40px)",
-            backdropFilter: "blur(40px)",
-            border: "1px solid rgba(255,255,255,.8)",
-            borderRadius: 16,
-            boxShadow: "0 20px 50px rgba(24,24,53,.25)",
-          }}
-        >
+        <div className="piq-dropdown-menu" style={{ width: 308 }} role="listbox">
           <div style={{ padding: "12px 12px 8px" }}>
             <div
               style={{

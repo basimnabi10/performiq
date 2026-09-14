@@ -166,7 +166,7 @@ export function AssignLearningModal({
           >
             <div style={{ marginTop: 22 }}>
               <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Course</label>
-              <select
+              <select className="piq-select"
                 value={courseId}
                 onChange={(e) => setCourseId(e.target.value)}
                 style={{ ...inputStyle, cursor: "pointer" }}

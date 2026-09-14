@@ -72,7 +72,7 @@ export function AssignReviewerModal({
         >
           <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             Reviewee
-            <select value={revieweeId} onChange={(e) => setRevieweeId(e.target.value)} style={inputStyle}>
+            <select className="piq-select" value={revieweeId} onChange={(e) => setRevieweeId(e.target.value)} style={inputStyle}>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
@@ -82,7 +82,7 @@ export function AssignReviewerModal({
           </label>
           <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             Reviewer
-            <select value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} style={inputStyle}>
+            <select className="piq-select" value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} style={inputStyle}>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
