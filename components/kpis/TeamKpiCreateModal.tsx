@@ -295,7 +295,7 @@ export function TeamKpiCreateModal({
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Target value</label>
                 <div style={{ display: "flex", alignItems: "center", marginTop: 8, height: 46, background: "rgba(255,255,255,.7)", border: "1.5px solid rgba(168,175,203,.4)", borderRadius: 12, overflow: "hidden" }}>
-                  <span style={{ padding: "0 13px", fontSize: 14, color: "#767FA5", borderRight: "1px solid rgba(168,175,203,.35)", alignSelf: "stretch", display: "flex", alignItems: "center" }}>
+                  <span style={{ padding: "0 13px", fontSize: 14, color: "#596392", borderRight: "1px solid rgba(168,175,203,.35)", alignSelf: "stretch", display: "flex", alignItems: "center" }}>
                     {UNIT_SYMBOL[metric]}
                   </span>
                   <input
@@ -315,7 +315,7 @@ export function TeamKpiCreateModal({
                     placeholder="10"
                     style={{ flex: 1, minWidth: 0, height: "100%", border: "none", background: "transparent", padding: "0 13px", fontSize: 14, color: "#181835", fontVariantNumeric: "tabular-nums", outline: "none" }}
                   />
-                  <span style={{ padding: "0 13px", fontSize: 14, color: "#767FA5", borderLeft: "1px solid rgba(168,175,203,.35)", alignSelf: "stretch", display: "flex", alignItems: "center" }}>
+                  <span style={{ padding: "0 13px", fontSize: 14, color: "#596392", borderLeft: "1px solid rgba(168,175,203,.35)", alignSelf: "stretch", display: "flex", alignItems: "center" }}>
                     %
                   </span>
                 </div>
@@ -371,7 +371,7 @@ export function TeamKpiCreateModal({
                           onChange={(e) => setWeightEdits((prev) => ({ ...prev, [row.kpiTeamId]: e.target.value }))}
                           style={{ flex: 1, minWidth: 0, height: "100%", border: "none", background: "transparent", padding: "0 10px", fontSize: 13, color: "#181835", fontVariantNumeric: "tabular-nums", textAlign: "right", outline: "none" }}
                         />
-                        <span style={{ padding: "0 9px", fontSize: 12, color: "#767FA5", borderLeft: "1px solid rgba(168,175,203,.35)", alignSelf: "stretch", display: "flex", alignItems: "center" }}>
+                        <span style={{ padding: "0 9px", fontSize: 12, color: "#596392", borderLeft: "1px solid rgba(168,175,203,.35)", alignSelf: "stretch", display: "flex", alignItems: "center" }}>
                           %
                         </span>
                       </div>

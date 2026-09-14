@@ -47,6 +47,9 @@ export function InviteMemberModal({
 }) {
   const [open, setOpen] = useState(false);
   const [teamId, setTeamId] = useState(teams[0]?.id ?? "");
+  // Odoo is disabled for now (see the tab below), so manual is the only
+  // reachable mode -- but the state stays, because the lookup flow behind it
+  // is complete and only waiting on credentials.
   const [mode, setMode] = useState<"manual" | "odoo">("manual");
   const [authRole, setAuthRole] = useState<"ic" | "admin">("ic");
   const [email, setEmail] = useState("");
@@ -243,7 +246,7 @@ export function InviteMemberModal({
                       </span>
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#181835" }}>{r.label}</span>
-                        <span style={{ display: "block", fontSize: 11, color: "#767FA5", marginTop: 1 }}>{r.blurb}</span>
+                        <span style={{ display: "block", fontSize: 11, color: "#596392", marginTop: 1 }}>{r.blurb}</span>
                       </span>
                       <span
                         style={{
@@ -272,13 +275,28 @@ export function InviteMemberModal({
               <div style={{ display: "flex", gap: 5, padding: 5, background: "rgba(255,255,255,.55)", border: "1px solid rgba(255,255,255,.7)", borderRadius: 13 }}>
                 <button
                   type="button"
-                  onClick={() => setMode("odoo")}
-                  style={modeTabStyle(mode === "odoo")}
+                  disabled
+                  title="Odoo HR isn't connected yet — invite people manually for now."
+                  aria-disabled="true"
+                  style={{ ...modeTabStyle(false), cursor: "not-allowed", opacity: 0.55 }}
                 >
                   <span style={{ width: 16, height: 16, borderRadius: 5, background: "#7B2FBF", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 600 }}>
                     O
                   </span>
                   Fetch from Odoo
+                  <span
+                    style={{
+                      marginLeft: 2,
+                      padding: "2px 7px",
+                      borderRadius: 999,
+                      background: "rgba(89,99,146,.14)",
+                      fontSize: 10,
+                      fontWeight: 500,
+                      color: "#454D7A",
+                    }}
+                  >
+                    Soon
+                  </span>
                 </button>
                 <button type="button" onClick={() => setMode("manual")} style={modeTabStyle(mode === "manual")}>
                   <iconify-icon icon="ant-design:edit-outlined" width={15} />
@@ -449,7 +467,7 @@ export function InviteMemberModal({
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: "#767FA5" }}>{label}</div>
+      <div style={{ fontSize: 11, color: "#596392" }}>{label}</div>
       <div style={{ fontSize: 13, color: "#252944", marginTop: 1 }}>{value}</div>
     </div>
   );

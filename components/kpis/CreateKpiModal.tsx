@@ -179,7 +179,7 @@ export function CreateKpiModal({
         >
           {teams.length > 0 ? (
             <div style={{ marginTop: 4 }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: "#596392", letterSpacing: ".04em", textTransform: "uppercase" }}>
                 Apply to teams
               </div>
               <div style={{ display: "flex", gap: 12, marginTop: 11, flexWrap: "wrap" }}>
@@ -218,7 +218,7 @@ export function CreateKpiModal({
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 500, color: "#181835" }}>{t.name}</div>
-                        <div style={{ fontSize: 11, color: "#767FA5" }}>{t.memberCount} members</div>
+                        <div style={{ fontSize: 11, color: "#596392" }}>{t.memberCount} members</div>
                       </div>
                       <span
                         style={{
@@ -298,7 +298,7 @@ export function CreateKpiModal({
                   style={{
                     padding: "0 13px",
                     fontSize: 14,
-                    color: "#767FA5",
+                    color: "#596392",
                     borderRight: "1px solid rgba(168,175,203,.35)",
                     alignSelf: "stretch",
                     display: "flex",

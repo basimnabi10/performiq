@@ -34,7 +34,7 @@ export function RemoveMemberButton({ memberId, memberName }: { memberId: string;
           border: "none",
           cursor: "pointer",
           background: "rgba(89,99,146,.10)",
-          color: "#767FA5",
+          color: "#596392",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
