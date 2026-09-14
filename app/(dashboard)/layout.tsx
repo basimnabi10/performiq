@@ -45,13 +45,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             { href: "/members", label: "Members", icon: "ant-design:user-outlined" },
           ],
         },
-        {
-          label: "Reviews",
-          items: [
-            { href: "/kpi-review", label: "Run reviews", icon: "ant-design:form-outlined" },
-            { href: "/reviews", label: "All reviews", icon: "ant-design:file-done-outlined" },
-          ],
-        },
+        { label: "Reviews", items: [{ href: "/reviews", label: "Reviews", icon: "ant-design:file-done-outlined" }] },
         {
           label: "Performance",
           items: [
@@ -77,13 +71,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               { href: "/members", label: "Members", icon: "ant-design:user-outlined" },
             ],
           },
-          {
-          label: "Reviews",
-          items: [
-            { href: "/kpi-review", label: "Run reviews", icon: "ant-design:form-outlined" },
-            { href: "/reviews", label: "All reviews", icon: "ant-design:file-done-outlined" },
-          ],
-        },
+          { label: "Reviews", items: [{ href: "/reviews", label: "Reviews", icon: "ant-design:file-done-outlined" }] },
           {
             label: "Performance",
             items: [

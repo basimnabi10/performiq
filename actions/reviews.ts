@@ -43,19 +43,32 @@ async function assertCanEditReview(
   review: { reviewerId: string; cycleId: string },
   actor: { id: string; authRole: string },
 ): Promise<void> {
-  if (actor.authRole === "admin") return;
+  const cycle = await prisma.reviewCycle.findUnique({
+    where: { id: review.cycleId },
+    select: { status: true, label: true, quarter: { select: { status: true, year: true, index: true } } },
+  });
+
+  // An admin can correct any review -- including a submitted one, and
+  // including a month that has closed -- but only while its QUARTER is still
+  // running. Once the quarter is finalised its average is a published number
+  // that people have been reviewed and compared on, and silently moving it
+  // afterwards makes every report that quoted it wrong.
+  if (actor.authRole === "admin") {
+    if (cycle?.quarter && cycle.quarter.status === "closed") {
+      throw new Error(
+        `Q${cycle.quarter.index} ${cycle.quarter.year} is finished, so its reviews are final and can no longer be edited.`,
+      );
+    }
+    return;
+  }
 
   if (review.reviewerId !== actor.id) {
     throw new AuthzError("Only the assigned reviewer can edit this review.");
   }
 
-  const cycle = await prisma.reviewCycle.findUnique({
-    where: { id: review.cycleId },
-    select: { status: true, label: true },
-  });
   if (cycle?.status === "closed") {
     throw new Error(
-      `${cycle.label} is closed, so this review can no longer be changed. Ask an admin to reopen the month or correct it for you.`,
+      `${cycle.label} is closed, so this review can no longer be changed. Ask an admin to correct it for you.`,
     );
   }
 }
