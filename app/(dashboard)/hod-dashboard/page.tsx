@@ -8,7 +8,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
 import { MonthPicker, type MonthOption } from "@/components/cycles/MonthPicker";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { CreateKpiModal } from "@/components/kpis/CreateKpiModal";
+import { CreateKpiWizard } from "@/components/kpis/CreateKpiWizard";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
 import { PerformanceBanner } from "@/components/dashboard/hod/PerformanceBanner";
 import { TeamPerformanceCard } from "@/components/dashboard/hod/TeamPerformanceCard";
@@ -50,6 +50,13 @@ function daysUntil(date: Date): number {
 
 export default async function HodDashboardPage({ searchParams }: PageProps<"/hod-dashboard">) {
   const actor = await getCurrentMember();
+
+  // Shared across the org, so every team picks from the same list.
+  const kpiCategories = await prisma.kpiCategory.findMany({
+    where: { orgId: actor.orgId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
   if (actor.authRole !== "admin" && actor.authRole !== "hod") {
     redirect("/my-dashboard");
   }
@@ -122,6 +129,23 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
   const monthCycleIds = monthCycles.map((c) => c.id);
   const activeCycle = monthCycles.find((c) => c.status === "in_progress") ?? monthCycles[0] ?? null;
   const isViewingPastMonth = activeCycle != null && !monthCycles.some((c) => c.status === "in_progress");
+
+  // Current weights on this quarter's KPIs, so the create wizard shows the
+  // real framework and rebalances against it rather than guessing.
+  const existingKpiWeights = activeCycle?.quarterId
+    ? (
+        await prisma.kpiTeam.findMany({
+          where: { kpi: { quarterId: activeCycle.quarterId } },
+          include: { kpi: { select: { id: true, name: true } } },
+        })
+      ).map((kt) => ({
+        kpiTeamId: kt.id,
+        kpiId: kt.kpiId,
+        teamId: kt.teamId,
+        kpiName: kt.kpi.name,
+        weightPct: kt.weightPct,
+      }))
+    : [];
 
   if (!activeCycle) {
     // Setting up from scratch has an order to it: a cycle with no teams or
@@ -558,8 +582,10 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             </Button>
           </Link>
           {canCreateKpi ? (
-            <CreateKpiModal
+            <CreateKpiWizard
+              categories={kpiCategories}
               quarterId={activeCycle.quarterId ?? ""}
+              existingWeights={existingKpiWeights}
               teams={teamsToShow.map((t, i) => ({
                 id: t.id,
                 name: t.name,

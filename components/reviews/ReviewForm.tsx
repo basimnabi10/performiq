@@ -11,6 +11,9 @@ export interface ReviewFormKpi {
   kpiId: string;
   name: string;
   description: string | null;
+  /** What the 1-5 ratings mean for this KPI, if whoever set it up wrote it. */
+  rubric?: string | null;
+  categoryName?: string | null;
   targetValue: string;
   unit: string | null;
   weightPct: number;
@@ -149,6 +152,32 @@ export function ReviewForm({
             </span>
           </div>
           {k.description ? <div className="piq-caption">{k.description}</div> : null}
+
+          {k.rubric ? (
+            // Shown with the ratings rather than hidden behind a tooltip: a
+            // rubric nobody reads is the same as no rubric, and the whole
+            // point is that two reviewers scoring the same work agree.
+            <div
+              style={{
+                display: "flex",
+                gap: 9,
+                marginTop: 8,
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: "rgba(89,99,146,.08)",
+                border: "1px solid rgba(168,175,203,.35)",
+              }}
+            >
+              <iconify-icon
+                icon="ant-design:info-circle-outlined"
+                width={14}
+                style={{ color: "var(--text-secondary)", flexShrink: 0, marginTop: 2 }}
+              />
+              <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "var(--text-body)", whiteSpace: "pre-wrap" }}>
+                {k.rubric}
+              </div>
+            </div>
+          ) : null}
           <div style={{ display: "flex", gap: 8 }}>
             {[1, 2, 3, 4, 5].map((n) => (
               <button

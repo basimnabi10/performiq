@@ -91,6 +91,7 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
     unit: kt.kpi.unit,
     weightPct: kt.weightPct,
     metricType: kt.kpi.metricType,
+    rubric: kt.kpi.rubric,
     initialRating: scoreByKpi.get(kt.kpiId)?.rating ?? null,
     initialComment: scoreByKpi.get(kt.kpiId)?.comment ?? null,
   }));

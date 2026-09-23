@@ -24,21 +24,31 @@ export interface CreateKpiTeamOption {
   gradient: string;
 }
 
+export interface KpiCategoryOption {
+  id: string;
+  name: string;
+}
+
 export function CreateKpiModal({
   quarterId,
   teams,
+  categories,
   defaultTeamId,
   variant = "primary",
   size,
 }: {
   quarterId: string;
   teams: CreateKpiTeamOption[];
+  /** The org's shared category list. */
+  categories: KpiCategoryOption[];
   /** Pre-checked team when the modal opens (e.g. the team-detail page this button lives on). */
   defaultTeamId?: string;
   variant?: "primary" | "secondary";
   size?: "sm" | "md" | "lg" | "header";
 }) {
   const [open, setOpen] = useState(false);
+  const [categoryId, setCategoryId] = useState("");
+  const [rubric, setRubric] = useState("");
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
     () => new Set(defaultTeamId ? [defaultTeamId] : teams[0] ? [teams[0].id] : []),
   );
@@ -167,6 +177,8 @@ export function CreateKpiModal({
               quarterId,
               name,
               description: description || undefined,
+              categoryId: categoryId || undefined,
+              rubric: rubric || undefined,
               metricType,
               direction,
               targetValue,
@@ -260,6 +272,30 @@ export function CreateKpiModal({
               placeholder="What does this KPI measure, and why does it matter this cycle?"
               rows={2}
               style={{ ...inputStyle, height: 74, padding: "12px 15px", resize: "none", lineHeight: 1.5 }}
+            />
+          </Field>
+          <Field label="Category">
+            <select
+              className="piq-select"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              style={{ height: 46 }}
+            >
+              <option value="">No category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Rating guidance (optional)">
+            <textarea
+              value={rubric}
+              onChange={(e) => setRubric(e.target.value)}
+              placeholder="What does a 1 look like, and what does a 5 look like? Reviewers see this while scoring."
+              rows={3}
+              style={{ ...inputStyle, height: 92, padding: "12px 15px", resize: "vertical", lineHeight: 1.5 }}
             />
           </Field>
           <Field label="Metric type">

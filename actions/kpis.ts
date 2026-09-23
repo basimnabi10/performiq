@@ -11,6 +11,7 @@ import {
   createTeamKpiSchema,
   updateKpiCurrentSchema,
   updateKpiTeamWeightSchema,
+  createKpiCategorySchema,
 } from "@/lib/validation/kpis.schema";
 
 export const createKpi = authActionClient
@@ -30,6 +31,21 @@ export const createKpi = authActionClient
     }
 
     const kpi = await prisma.$transaction(async (tx) => {
+      // The wizard may have lowered other KPIs to make room. Those edits are
+      // part of the same decision, so they are applied in the same
+      // transaction: applying one without the other leaves a team either over
+      // 100% or with weight taken away for a KPI that never arrived.
+      for (const edit of parsedInput.weightEdits) {
+        const row = await tx.kpiTeam.findUnique({
+          where: { id: edit.kpiTeamId },
+          include: { kpi: { select: { quarterId: true, orgId: true } } },
+        });
+        if (!row || row.kpi.orgId !== actor.orgId || row.kpi.quarterId !== parsedInput.quarterId) {
+          throw new Error("A weight you adjusted belongs to a different quarter.");
+        }
+        await tx.kpiTeam.update({ where: { id: edit.kpiTeamId }, data: { weightPct: edit.weightPct } });
+      }
+
       for (const tw of parsedInput.teamWeights) {
         await assertWeightBudget(tx, {
           teamId: tw.teamId,
@@ -44,12 +60,15 @@ export const createKpi = authActionClient
           quarterId: parsedInput.quarterId,
           ownerId: actor.id,
           name: parsedInput.name,
+          categoryId: parsedInput.categoryId || null,
+          rubric: parsedInput.rubric || null,
           description: parsedInput.description,
           metricType: parsedInput.metricType,
           direction: parsedInput.direction,
           targetValue: parsedInput.targetValue,
           unit: parsedInput.unit,
           cadence: parsedInput.cadence,
+          lifecycle: parsedInput.lifecycle,
           status: "new",
         },
       });
@@ -110,6 +129,8 @@ export const createTeamKpi = authActionClient
           quarterId: parsedInput.quarterId,
           ownerId: actor.id,
           name: parsedInput.name,
+          categoryId: parsedInput.categoryId || null,
+          rubric: parsedInput.rubric || null,
           description: parsedInput.detail,
           metricType: parsedInput.metricType,
           direction: parsedInput.direction,
@@ -206,4 +227,35 @@ export const updateKpiCurrent = authActionClient
 
     revalidatePath("/kpis");
     for (const kt of kpi.kpiTeams) revalidatePath(`/teams/${kt.teamId}`);
+  });
+
+/**
+ * Adds a KPI category (Performance, Professionalism, Growth ship by default).
+ *
+ * Org-wide rather than per-department: the same category has to mean the same
+ * thing everywhere, or two departments invent different names for the same
+ * idea and scores stop being comparable across teams.
+ */
+export const createKpiCategory = authActionClient
+  .schema(createKpiCategorySchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const name = parsedInput.name.trim();
+    const existing = await prisma.kpiCategory.findFirst({
+      where: { orgId: actor.orgId, name: { equals: name, mode: "insensitive" } },
+    });
+    if (existing) {
+      // Not an error worth stopping for — the caller wanted a category with
+      // this name and one exists, so hand back the one that does.
+      return { categoryId: existing.id, name: existing.name, created: false };
+    }
+
+    const category = await prisma.kpiCategory.create({
+      data: { orgId: actor.orgId, name },
+    });
+
+    revalidatePath("/kpis");
+    return { categoryId: category.id, name: category.name, created: true };
   });

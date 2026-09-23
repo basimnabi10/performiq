@@ -4,6 +4,13 @@ export const createKpiSchema = z.object({
   quarterId: z.string().min(1),
   name: z.string().trim().min(2, { error: "Enter a KPI name." }).max(80),
   description: z.string().trim().max(500).optional(),
+  categoryId: z.string().optional(),
+  rubric: z.string().trim().max(2000).optional(),
+  lifecycle: z.enum(["draft", "active"]).default("active"),
+  /** Other KPI weights the wizard rebalanced, saved in the same write. */
+  weightEdits: z
+    .array(z.object({ kpiTeamId: z.string().min(1), weightPct: z.number().int().min(0).max(100) }))
+    .default([]),
   metricType: z.enum(["number", "percentage", "rating", "currency", "days"]),
   direction: z.enum(["higher_is_better", "lower_is_better"]).default("higher_is_better"),
   targetValue: z.string().trim().min(1, { error: "Enter a target." }),
@@ -44,6 +51,8 @@ export const createTeamKpiSchema = z.object({
   teamId: z.string().min(1),
   name: z.string().trim().min(2, { error: "Enter a KPI name." }).max(80),
   detail: z.string().trim().max(200).optional(),
+  categoryId: z.string().optional(),
+  rubric: z.string().trim().max(2000).optional(),
   metricType: z.enum(["number", "percentage", "rating", "days"]),
   direction: z.enum(["higher_is_better", "lower_is_better"]).default("higher_is_better"),
   targetValue: z.string().trim().min(1, { error: "Enter a target." }),
@@ -52,4 +61,13 @@ export const createTeamKpiSchema = z.object({
   weightEdits: z
     .array(z.object({ kpiTeamId: z.string().min(1), weightPct: z.number().int().min(0).max(100) }))
     .default([]),
+});
+
+/** HODs and admins can add to the shared category list. */
+export const createKpiCategorySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, { error: "Give the category a name." })
+    .max(40, { error: "Keep a category name under 40 characters." }),
 });

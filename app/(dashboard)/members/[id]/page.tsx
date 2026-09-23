@@ -160,6 +160,7 @@ export default async function MemberProfilePage({ params }: PageProps<"/members/
     unit: kt.kpi.unit,
     weightPct: kt.weightPct,
     metricType: kt.kpi.metricType,
+    rubric: kt.kpi.rubric,
     initialRating: panelScoreByKpi.get(kt.kpiId)?.rating ?? null,
     initialComment: panelScoreByKpi.get(kt.kpiId)?.comment ?? null,
   }));

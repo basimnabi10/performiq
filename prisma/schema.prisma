@@ -71,6 +71,15 @@ enum KpiCadence {
   quarterly
 }
 
+/// Where a KPI is in its life, as distinct from whether it is hitting its
+/// target (that is KpiStatus). A draft is set up but not yet scored on, so
+/// someone can prepare a quarter's KPIs without them appearing half-finished
+/// on live review forms.
+enum KpiLifecycle {
+  draft
+  active
+}
+
 enum KpiStatus {
   on
   below
@@ -114,6 +123,7 @@ model Organization {
   reviewCycles ReviewCycle[]
   quarters     Quarter[]
   coachingNotes CoachingNote[]
+  kpiCategories KpiCategory[]
   kpis         Kpi[]
   courses      Course[]
   auditLogs    AuditLog[]
@@ -292,7 +302,7 @@ model ReviewCycle {
   endDate      DateTime
 
   reviews     Review[]
-  assignments ReviewAssignment[]
+  assignments ReviewAssignment[]
   memberScores MemberKpiScore[]
   snapshots   CycleSnapshot[]
 
@@ -377,6 +387,25 @@ model ReviewerGrant {
 // KPIs
 // ---------------------------------------------------------------------------
 
+/// What kind of thing a KPI measures — Performance, Professionalism,
+/// Growth, and whatever else an HOD adds.
+///
+/// Org-wide rather than per-department on purpose: the same category has to
+/// mean the same thing everywhere, or scores stop being comparable across
+/// teams the moment two departments invent their own wording for it.
+model KpiCategory {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+
+  kpis Kpi[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
 model Kpi {
   id            String        @id @default(cuid())
   orgId         String
@@ -389,12 +418,22 @@ model Kpi {
   owner         Member        @relation(fields: [ownerId], references: [id])
   name          String
   description   String?
+  /// Optional so the KPIs that existed before categories did still load.
+  categoryId    String?
+  category      KpiCategory?  @relation(fields: [categoryId], references: [id])
+  /// What the 1-5 ratings mean for this KPI, written by whoever set it up and
+  /// shown to reviewers while they score. Two managers rating the same work
+  /// land on different numbers without one.
+  rubric        String?
   metricType    KpiMetricType
   direction     KpiDirection  @default(higher_is_better)
   targetValue   String // display string, e.g. "≥ 4.5"
   targetNumeric Decimal?      @db.Decimal(10, 2)
   unit          String?
   cadence       KpiCadence    @default(quarterly)
+  /// Defaults to active so every KPI that existed before this field keeps
+  /// counting; the create wizard sets draft explicitly for new ones.
+  lifecycle     KpiLifecycle  @default(active)
   status        KpiStatus     @default(new)
 
   // The KPI's actual measured value this cycle, in the KPI's own real-world
@@ -416,6 +455,7 @@ model Kpi {
 
   @@index([orgId])
   @@index([quarterId])
+  @@index([categoryId])
 }
 
 // KPI <-> Team join. Weight lives here (not on Kpi) because the same KPI can
