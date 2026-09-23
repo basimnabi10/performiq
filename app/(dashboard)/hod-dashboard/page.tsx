@@ -593,9 +593,18 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           <span style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
             Performance by KPI
           </span>
-          <span style={{ fontSize: 12, color: "#767FA5" }}>
-            {selectedTeam ? selectedTeam.name : "All teams"} · ranked by KPI score
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontSize: 12, color: "#596392" }}>
+              {selectedTeam ? selectedTeam.name : "All teams"} · ranked by KPI score
+            </span>
+            <Link
+              href={`/performance?month=${selectedMonthKey}${selectedTeam ? `&team=${selectedTeam.id}` : ""}`}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 500, color: "#273FF9", textDecoration: "none" }}
+            >
+              View all
+              <iconify-icon icon="ant-design:arrow-right-outlined" width="13" />
+            </Link>
+          </div>
         </div>
         <KpiPerformancePanel kpis={kpiPanelEntries} />
 
