@@ -71,3 +71,25 @@ export const createKpiCategorySchema = z.object({
     .min(2, { error: "Give the category a name." })
     .max(40, { error: "Keep a category name under 40 characters." }),
 });
+
+/** CSV import: the file is parsed in the browser and sent as rows. */
+export const importKpisSchema = z.object({
+  quarterId: z.string().min(1),
+  teamId: z.string().min(1),
+  rows: z
+    .array(
+      z.object({
+        name: z.string().trim().min(2).max(80),
+        description: z.string().trim().max(500).optional(),
+        categoryName: z.string().trim().max(40).optional(),
+        rubric: z.string().trim().max(2000).optional(),
+        metricType: z.enum(["number", "percentage", "rating", "currency", "days"]).default("rating"),
+        direction: z.enum(["higher_is_better", "lower_is_better"]).default("higher_is_better"),
+        targetValue: z.string().trim().min(1),
+        unit: z.string().trim().max(20).optional(),
+        weightPct: z.number().int().min(0).max(100),
+      }),
+    )
+    .min(1, { error: "The file had no usable rows." })
+    .max(100, { error: "Import at most 100 KPIs at a time." }),
+});

@@ -1,7 +1,14 @@
+"use client";
+
 import Link from "next/link";
+
+import { useState } from "react";
+import { KpiDetailDrawer, type KpiDetail } from "@/components/kpis/KpiDetailDrawer";
 
 export interface TeamKpiRow {
   kpiTeamId: string;
+  /** Everything the drawer shows, prepared on the server. */
+  detail?: KpiDetail;
   name: string;
   icon: string;
   quantifier: string;
@@ -24,6 +31,7 @@ const STATUS_BADGE: Record<"on" | "below" | "no_target" | "unmeasured", { label:
 };
 
 export function TeamKpiTable({ rows }: { rows: TeamKpiRow[] }) {
+  const [openKpi, setOpenKpi] = useState<KpiDetail | null>(null);
   if (rows.length === 0) {
     return (
       <div
@@ -71,7 +79,21 @@ export function TeamKpiTable({ rows }: { rows: TeamKpiRow[] }) {
           return (
             <div
               key={row.kpiTeamId}
+              onClick={row.detail ? () => setOpenKpi(row.detail ?? null) : undefined}
+              role={row.detail ? "button" : undefined}
+              tabIndex={row.detail ? 0 : undefined}
+              onKeyDown={
+                row.detail
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setOpenKpi(row.detail ?? null);
+                      }
+                    }
+                  : undefined
+              }
               style={{
+                cursor: row.detail ? "pointer" : "default",
                 background: "rgba(255,255,255,.20)",
                 border: "1px solid rgba(255,255,255,.40)",
                 WebkitBackdropFilter: "blur(35px)",
@@ -184,6 +206,8 @@ export function TeamKpiTable({ rows }: { rows: TeamKpiRow[] }) {
           <iconify-icon icon="ant-design:arrow-right-outlined" width={16} style={{ color: "#273FF9", flexShrink: 0 }} />
         </div>
       </Link>
+
+      <KpiDetailDrawer kpi={openKpi} onClose={() => setOpenKpi(null)} />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { findActiveCycle, findActiveQuarter } from "@/lib/cycles";
 import { quarterLabel } from "@/lib/quarters";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
+import { ImportKpisButton } from "@/components/kpis/ImportKpisButton";
+import { KpiDrawerHost } from "@/components/kpis/KpiDrawerHost";
 import { TeamKpiCreateModal } from "@/components/kpis/TeamKpiCreateModal";
 import { METRIC_ICON } from "@/components/kpis/TeamKpiCreateModal";
 import { KpiCurrentCell } from "@/components/kpis/KpiCurrentCell";
@@ -49,7 +51,14 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const kpiTeams = activeQuarter
     ? await prisma.kpiTeam.findMany({
         where: { teamId: selectedTeam.id, kpi: { quarterId: activeQuarter.id } },
-        include: { kpi: true },
+        include: {
+          kpi: {
+            include: {
+              category: { select: { name: true } },
+              owner: { select: { name: true } },
+            },
+          },
+        },
         orderBy: { createdAt: "asc" },
       })
     : [];
@@ -62,6 +71,12 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
         where: { cycleId: activeCycle.id, memberId: { in: memberIds }, kpiId: { in: kpiTeams.map((kt) => kt.kpiId) } },
       })
     : [];
+
+  const teamMemberRecords = await prisma.member.findMany({
+    where: { id: { in: memberIds } },
+    select: { id: true, name: true },
+  });
+  const teamMemberNames = new Map(teamMemberRecords.map((m) => [m.id, m.name]));
 
   const kpiRows = kpiTeams.map((kt) => {
     const scores = memberKpiScores.filter((s) => s.kpiId === kt.kpiId);
@@ -84,6 +99,31 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       // from Kpi.status, which is only a creation-time default and never moves.
       measurementStatus: kpiMeasurementStatus(kt.kpi.currentNumeric, kt.kpi),
       hasTarget: kt.kpi.targetNumeric != null,
+      // Everything the side drawer shows, assembled here so opening it costs
+      // no extra request.
+      detail: {
+        kpiId: kt.kpiId,
+        name: kt.kpi.name,
+        description: kt.kpi.description,
+        rubric: kt.kpi.rubric,
+        categoryName: kt.kpi.category?.name ?? null,
+        lifecycle: kt.kpi.lifecycle,
+        metricType: kt.kpi.metricType,
+        direction: kt.kpi.direction,
+        target: kt.kpi.targetValue,
+        unit: kt.kpi.unit ?? kt.kpi.metricType,
+        currentValue: kt.kpi.currentValue,
+        weightPct: kt.weightPct,
+        avgScore,
+        ownerName: kt.kpi.owner?.name ?? null,
+        scores: scores
+          .map((sc) => ({
+            memberId: sc.memberId,
+            name: teamMemberNames.get(sc.memberId) ?? "Unknown",
+            score: Number(sc.score),
+          }))
+          .sort((a, b) => b.score - a.score),
+      },
     };
   });
 
@@ -147,6 +187,13 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             Start review
           </Link>
           {canManage && activeQuarter ? (
+            <ImportKpisButton
+              quarterId={activeQuarter.id}
+              teamId={selectedTeam.id}
+              teamName={selectedTeam.name}
+            />
+          ) : null}
+          {canManage && activeQuarter ? (
             <TeamKpiCreateModal
               quarterId={activeQuarter.id}
               teamId={selectedTeam.id}
@@ -199,6 +246,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             </div>
           ) : null}
 
+          <KpiDrawerHost details={Object.fromEntries(kpiRows.map((r) => [r.kpiTeamId, r.detail]))}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {kpiRows.length === 0 ? (
               <div
@@ -218,7 +266,9 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
               kpiRows.map((row) => (
                 <div
                   key={row.kpiTeamId}
+                  data-kpi-id={row.kpiTeamId}
                   style={{
+                    cursor: "pointer",
                     background: "rgba(255,255,255,.20)",
                     border: "1px solid rgba(255,255,255,.40)",
                     WebkitBackdropFilter: "blur(35px)",
@@ -287,6 +337,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
               ))
             )}
           </div>
+          </KpiDrawerHost>
 
           <Link
             href="/reviews"

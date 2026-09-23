@@ -12,6 +12,7 @@ import {
   updateKpiCurrentSchema,
   updateKpiTeamWeightSchema,
   createKpiCategorySchema,
+  importKpisSchema,
 } from "@/lib/validation/kpis.schema";
 
 export const createKpi = authActionClient
@@ -258,4 +259,97 @@ export const createKpiCategory = authActionClient
 
     revalidatePath("/kpis");
     return { categoryId: category.id, name: category.name, created: true };
+  });
+
+/**
+ * Bulk-creates KPIs for one team from an uploaded sheet.
+ *
+ * Imported as DRAFTS regardless of what the file says. A spreadsheet is the
+ * easiest way to get twenty KPIs slightly wrong, and a draft can be corrected
+ * before anyone is scored against it -- whereas an active KPI with a typo in
+ * its target is already shaping a review.
+ *
+ * Categories are matched by name and created when missing, so a sheet listing
+ * "Professionalism" does not silently import with no category because of a
+ * capital letter.
+ */
+export const importKpis = authActionClient
+  .schema(importKpisSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const team = await prisma.team.findUnique({ where: { id: parsedInput.teamId } });
+    if (!team || team.orgId !== actor.orgId) throw new Error("Team not found.");
+    await requireScopeAccess(actor, { teamId: team.id, departmentId: team.departmentId });
+
+    const existingNames = new Set(
+      (
+        await prisma.kpi.findMany({
+          where: { quarterId: parsedInput.quarterId, kpiTeams: { some: { teamId: team.id } } },
+          select: { name: true },
+        })
+      ).map((k) => k.name.toLowerCase()),
+    );
+
+    const skipped: string[] = [];
+    const created: string[] = [];
+
+    await prisma.$transaction(async (tx) => {
+      for (const row of parsedInput.rows) {
+        if (existingNames.has(row.name.toLowerCase())) {
+          // Importing the same sheet twice should not double every KPI.
+          skipped.push(row.name);
+          continue;
+        }
+
+        let categoryId: string | null = null;
+        if (row.categoryName) {
+          const match = await tx.kpiCategory.findFirst({
+            where: { orgId: actor.orgId, name: { equals: row.categoryName, mode: "insensitive" } },
+          });
+          categoryId =
+            match?.id ??
+            (await tx.kpiCategory.create({ data: { orgId: actor.orgId, name: row.categoryName } })).id;
+        }
+
+        // The same 100% rule the form enforces. A sheet is the easiest way to
+        // blow the budget without noticing, and a team quietly at 130% makes
+        // every weighted score on it wrong.
+        await assertWeightBudget(tx, {
+          teamId: team.id,
+          quarterId: parsedInput.quarterId,
+          addWeight: row.weightPct,
+        });
+
+        const kpi = await tx.kpi.create({
+          data: {
+            orgId: actor.orgId,
+            quarterId: parsedInput.quarterId,
+            ownerId: actor.id,
+            name: row.name,
+            description: row.description || null,
+            categoryId,
+            rubric: row.rubric || null,
+            metricType: row.metricType,
+            direction: row.direction,
+            targetValue: row.targetValue,
+            unit: row.unit || null,
+            cadence: "quarterly",
+            lifecycle: "draft",
+            status: "new",
+          },
+        });
+
+        await tx.kpiTeam.create({
+          data: { kpiId: kpi.id, teamId: team.id, weightPct: row.weightPct },
+        });
+
+        existingNames.add(row.name.toLowerCase());
+        created.push(row.name);
+      }
+    });
+
+    revalidatePath("/kpis");
+    return { created: created.length, skipped };
   });
