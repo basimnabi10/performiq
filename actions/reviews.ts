@@ -40,9 +40,18 @@ async function upsertKpiScores(
  * score. Everyone else is read-only.
  */
 async function assertCanEditReview(
-  review: { reviewerId: string; cycleId: string },
+  review: { reviewerId: string; cycleId: string; type: string; revieweeId: string },
   actor: { id: string; authRole: string },
 ): Promise<void> {
+  // A self-review is the person's own account of their work. Nobody else
+  // completes it -- not an admin, not their HOD -- because a score submitted
+  // in someone's name, in their own voice, is not a correction but an
+  // impersonation. Reviewing that person is done through your OWN review of
+  // them (see openMemberReview).
+  if (review.type === "self" && review.revieweeId !== actor.id) {
+    throw new AuthzError("A self-review can only be completed by the person it belongs to.");
+  }
+
   const cycle = await prisma.reviewCycle.findUnique({
     where: { id: review.cycleId },
     select: { status: true, label: true, quarter: { select: { status: true, year: true, index: true } } },
