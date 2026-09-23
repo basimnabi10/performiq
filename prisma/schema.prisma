@@ -434,6 +434,11 @@ model Kpi {
   /// Defaults to active so every KPI that existed before this field keeps
   /// counting; the create wizard sets draft explicitly for new ones.
   lifecycle     KpiLifecycle  @default(active)
+  /// Listed in the organization KPI library for other teams to adopt.
+  /// Opt-in rather than default: a library that fills itself with every
+  /// team-specific KPI is noise, and the point of the library is that what
+  /// is in it was meant to be reused.
+  shareable     Boolean       @default(false)
   status        KpiStatus     @default(new)
 
   // The KPI's actual measured value this cycle, in the KPI's own real-world

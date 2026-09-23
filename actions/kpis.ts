@@ -13,6 +13,8 @@ import {
   updateKpiTeamWeightSchema,
   createKpiCategorySchema,
   importKpisSchema,
+  adoptKpiSchema,
+  setKpiShareableSchema,
 } from "@/lib/validation/kpis.schema";
 
 export const createKpi = authActionClient
@@ -352,4 +354,62 @@ export const importKpis = authActionClient
 
     revalidatePath("/kpis");
     return { created: created.length, skipped };
+  });
+
+/**
+ * Adds an existing organization KPI to a team.
+ *
+ * Creates a link, not a copy: the same KPI is used by several teams at
+ * different weights, so a change to its wording or target reaches everyone
+ * using it and scores stay comparable across teams. Copying would let
+ * "Communication" quietly become five different things.
+ */
+export const adoptKpi = authActionClient
+  .schema(adoptKpiSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const [kpi, team] = await Promise.all([
+      prisma.kpi.findUnique({ where: { id: parsedInput.kpiId } }),
+      prisma.team.findUnique({ where: { id: parsedInput.teamId } }),
+    ]);
+    if (!kpi || kpi.orgId !== actor.orgId) throw new Error("KPI not found.");
+    if (!team || team.orgId !== actor.orgId) throw new Error("Team not found.");
+    if (!kpi.shareable) throw new Error("That KPI is not shared with other teams.");
+    await requireScopeAccess(actor, { teamId: team.id, departmentId: team.departmentId });
+
+    const already = await prisma.kpiTeam.findUnique({
+      where: { kpiId_teamId: { kpiId: kpi.id, teamId: team.id } },
+    });
+    if (already) throw new Error(`${team.name} already uses ${kpi.name}.`);
+
+    await prisma.$transaction(async (tx) => {
+      await assertWeightBudget(tx, {
+        teamId: team.id,
+        quarterId: kpi.quarterId,
+        addWeight: parsedInput.weightPct,
+      });
+      await tx.kpiTeam.create({
+        data: { kpiId: kpi.id, teamId: team.id, weightPct: parsedInput.weightPct },
+      });
+    });
+
+    revalidatePath("/kpis");
+    return { kpiName: kpi.name, teamName: team.name };
+  });
+
+/** Publishes a KPI to the org library, or withdraws it. */
+export const setKpiShareable = authActionClient
+  .schema(setKpiShareableSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const kpi = await prisma.kpi.findUnique({ where: { id: parsedInput.kpiId } });
+    if (!kpi || kpi.orgId !== actor.orgId) throw new Error("KPI not found.");
+
+    await prisma.kpi.update({ where: { id: kpi.id }, data: { shareable: parsedInput.shareable } });
+    revalidatePath("/kpis");
+    return { shareable: parsedInput.shareable };
   });

@@ -12,10 +12,12 @@ import { KpiDetailDrawer, type KpiDetail } from "@/components/kpis/KpiDetailDraw
  */
 export function KpiDrawerHost({
   details,
+  canManage = false,
   children,
 }: {
   /** Keyed by the same id the rows carry in data-kpi-id. */
   details: Record<string, KpiDetail>;
+  canManage?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState<KpiDetail | null>(null);
@@ -34,7 +36,7 @@ export function KpiDrawerHost({
       >
         {children}
       </div>
-      <KpiDetailDrawer kpi={open} onClose={() => setOpen(null)} />
+      <KpiDetailDrawer kpi={open} onClose={() => setOpen(null)} canManage={canManage} />
     </>
   );
 }

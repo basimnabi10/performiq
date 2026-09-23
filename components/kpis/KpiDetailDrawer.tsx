@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { setKpiShareable } from "@/actions/kpis";
 
 export interface KpiDetail {
   kpiId: string;
@@ -9,6 +12,8 @@ export interface KpiDetail {
   rubric: string | null;
   categoryName: string | null;
   lifecycle: "draft" | "active";
+  /** Listed in the org library for other teams to adopt. */
+  shareable: boolean;
   metricType: string;
   direction: string;
   target: string;
@@ -28,7 +33,19 @@ export interface KpiDetail {
  * the others, is this rubric consistent with the rest — so losing the list
  * behind a full page navigation costs more than it gives.
  */
-export function KpiDetailDrawer({ kpi, onClose }: { kpi: KpiDetail | null; onClose: () => void }) {
+export function KpiDetailDrawer({
+  kpi,
+  onClose,
+  canManage = false,
+}: {
+  kpi: KpiDetail | null;
+  onClose: () => void;
+  /** Only admins and HODs can publish a KPI to the library. */
+  canManage?: boolean;
+}) {
+  const router = useRouter();
+  const [shared, setShared] = useState(false);
+  const share = useAction(setKpiShareable, { onSuccess: () => router.refresh() });
   useEffect(() => {
     if (!kpi) return;
     const onKey = (e: KeyboardEvent) => {
@@ -46,6 +63,7 @@ export function KpiDetailDrawer({ kpi, onClose }: { kpi: KpiDetail | null; onClo
   }, [kpi, onClose]);
 
   if (!kpi) return null;
+  const isShared = share.result.data ? share.result.data.shareable : (shared || kpi.shareable);
 
   const tone = kpi.lifecycle === "draft"
     ? { label: "Draft", bg: "rgba(250,173,20,.18)", color: "#8A5D00" }
@@ -153,6 +171,32 @@ export function KpiDetailDrawer({ kpi, onClose }: { kpi: KpiDetail | null; onClo
             </div>
           )}
         </Section>
+
+        {canManage ? (
+          <Section title="Organization library">
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={isShared}
+                disabled={share.isExecuting}
+                onChange={(e) => {
+                  setShared(e.target.checked);
+                  share.execute({ kpiId: kpi.kpiId, shareable: e.target.checked });
+                }}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-strong)" }}>
+                  Share with other teams
+                </span>
+                <span className="piq-caption" style={{ display: "block", marginTop: 2, lineHeight: 1.5 }}>
+                  Puts it in the KPI library so any team can adopt it. They pick their own weight; the wording and
+                  target stay shared, so a change here reaches everyone using it.
+                </span>
+              </span>
+            </label>
+          </Section>
+        ) : null}
 
         {kpi.ownerName ? <div className="piq-caption">Created by {kpi.ownerName}</div> : null}
       </aside>

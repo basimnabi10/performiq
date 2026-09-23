@@ -93,3 +93,16 @@ export const importKpisSchema = z.object({
     .min(1, { error: "The file had no usable rows." })
     .max(100, { error: "Import at most 100 KPIs at a time." }),
 });
+
+/** Adding an existing org KPI to a team, at that team's own weight. */
+export const adoptKpiSchema = z.object({
+  kpiId: z.string().min(1),
+  teamId: z.string().min(1),
+  weightPct: z.number().int().min(0).max(100),
+});
+
+/** Publishing a KPI to the org library, or withdrawing it. */
+export const setKpiShareableSchema = z.object({
+  kpiId: z.string().min(1),
+  shareable: z.boolean(),
+});

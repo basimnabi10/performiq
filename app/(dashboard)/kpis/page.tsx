@@ -7,7 +7,8 @@ import { quarterLabel } from "@/lib/quarters";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
 import { ImportKpisButton } from "@/components/kpis/ImportKpisButton";
 import { KpiDrawerHost } from "@/components/kpis/KpiDrawerHost";
-import { TeamKpiCreateModal } from "@/components/kpis/TeamKpiCreateModal";
+import { KpiLibraryDrawer } from "@/components/kpis/KpiLibraryDrawer";
+import { CreateKpiWizard } from "@/components/kpis/CreateKpiWizard";
 import { METRIC_ICON } from "@/components/kpis/TeamKpiCreateModal";
 import { KpiCurrentCell } from "@/components/kpis/KpiCurrentCell";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -47,6 +48,55 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   }
 
   const selectedTeam = teams.find((t) => t.id === teamParam) ?? teams[0];
+
+  // Shared across the org, so every team picks from the same list.
+  const kpiCategories = await prisma.kpiCategory.findMany({
+    where: { orgId: actor.orgId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+
+  // The org library: only KPIs someone deliberately shared. Includes which
+  // teams use each one and at what weight, since that is the useful context
+  // when deciding whether to adopt it.
+  const libraryKpis = activeQuarter
+    ? (
+        await prisma.kpi.findMany({
+          where: { orgId: actor.orgId, quarterId: activeQuarter.id, shareable: true },
+          orderBy: { name: "asc" },
+          include: {
+            category: { select: { name: true } },
+            kpiTeams: { include: { team: { select: { id: true, name: true } } } },
+          },
+        })
+      ).map((k) => ({
+        kpiId: k.id,
+        name: k.name,
+        description: k.description,
+        categoryName: k.category?.name ?? null,
+        target: k.targetValue,
+        unit: k.unit,
+        usedBy: k.kpiTeams.map((kt) => ({ teamName: kt.team.name, weightPct: kt.weightPct })),
+        alreadyOnThisTeam: false,
+      }))
+    : [];
+
+  // Every weight in the open quarter, so the wizard rebalances against the
+  // real framework rather than only what this page happens to show.
+  const allQuarterWeights = activeQuarter
+    ? (
+        await prisma.kpiTeam.findMany({
+          where: { kpi: { quarterId: activeQuarter.id } },
+          include: { kpi: { select: { id: true, name: true } } },
+        })
+      ).map((kt) => ({
+        kpiTeamId: kt.id,
+        kpiId: kt.kpiId,
+        teamId: kt.teamId,
+        kpiName: kt.kpi.name,
+        weightPct: kt.weightPct,
+      }))
+    : [];
 
   const kpiTeams = activeQuarter
     ? await prisma.kpiTeam.findMany({
@@ -108,6 +158,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
         rubric: kt.kpi.rubric,
         categoryName: kt.kpi.category?.name ?? null,
         lifecycle: kt.kpi.lifecycle,
+        shareable: kt.kpi.shareable,
         metricType: kt.kpi.metricType,
         direction: kt.kpi.direction,
         target: kt.kpi.targetValue,
@@ -187,6 +238,17 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             Start review
           </Link>
           {canManage && activeQuarter ? (
+            <KpiLibraryDrawer
+              kpis={libraryKpis.map((k) => ({
+                ...k,
+                alreadyOnThisTeam: kpiRows.some((r) => r.detail.kpiId === k.kpiId),
+              }))}
+              teamId={selectedTeam.id}
+              teamName={selectedTeam.name}
+              remainingWeight={Math.max(0, 100 - totalWeight)}
+            />
+          ) : null}
+          {canManage && activeQuarter ? (
             <ImportKpisButton
               quarterId={activeQuarter.id}
               teamId={selectedTeam.id}
@@ -194,11 +256,12 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             />
           ) : null}
           {canManage && activeQuarter ? (
-            <TeamKpiCreateModal
+            <CreateKpiWizard
               quarterId={activeQuarter.id}
-              teamId={selectedTeam.id}
-              teamName={selectedTeam.name}
-              existingKpis={kpiRows.map((r) => ({ kpiTeamId: r.kpiTeamId, name: r.name, icon: r.icon, weightPct: r.weightPct }))}
+              teams={teams.map((t) => ({ id: t.id, name: t.name, memberCount: t._count?.members ?? 0 }))}
+              categories={kpiCategories}
+              existingWeights={allQuarterWeights}
+              defaultTeamId={selectedTeam.id}
             />
           ) : null}
         </div>
@@ -246,7 +309,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             </div>
           ) : null}
 
-          <KpiDrawerHost details={Object.fromEntries(kpiRows.map((r) => [r.kpiTeamId, r.detail]))}>
+          <KpiDrawerHost details={Object.fromEntries(kpiRows.map((r) => [r.kpiTeamId, r.detail]))} canManage={canManage}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {kpiRows.length === 0 ? (
               <div
