@@ -12,6 +12,15 @@ import { cycleScopeWhere } from "@/lib/cycles";
  * whole organization's review data.
  */
 
+/**
+ * Deliberately absent from this file: CoachingNote.
+ *
+ * This export is the report shared with HR, and the whole reason notes are a
+ * separate thing from reviews is that they do not go in it. If a future
+ * column needs "everything we know about this person", it still does not
+ * include notes -- add a separate, explicitly-labelled export instead.
+ */
+
 /** RFC 4180: quote anything containing a comma, quote or newline. */
 function csvCell(value: unknown): string {
   if (value == null) return "";

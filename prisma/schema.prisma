@@ -113,6 +113,7 @@ model Organization {
   members      Member[]
   reviewCycles ReviewCycle[]
   quarters     Quarter[]
+  coachingNotes CoachingNote[]
   kpis         Kpi[]
   courses      Course[]
   auditLogs    AuditLog[]
@@ -218,6 +219,8 @@ model Member {
   ownedKpis           Kpi[]
   ownedCourses        Course[]
   auditLogs           AuditLog[]
+  coachingNotes       CoachingNote[] @relation("NoteSubject")
+  coachingNotesWritten CoachingNote[] @relation("NoteAuthor")
 
   @@index([orgId])
   @@index([teamId])
@@ -593,6 +596,33 @@ model CycleSnapshot {
   createdAt DateTime @default(now())
 
   @@index([cycleId])
+}
+
+/// A written note about one person, kept alongside their reviews but never
+/// part of them.
+///
+/// The distinction matters and is enforced, not just documented: a review is
+/// the scored record that gets shared with HR, while a coaching note is the
+/// conversation around it -- context, encouragement, things to work on. Notes
+/// are readable by the person they are about, by their manager/HOD, and by
+/// admins; they are deliberately absent from every export.
+model CoachingNote {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// Who the note is about.
+  memberId  String
+  member    Member   @relation("NoteSubject", fields: [memberId], references: [id], onDelete: Cascade)
+  /// Who wrote it. Kept even if they later change role, so the note keeps its
+  /// authorship.
+  authorId  String
+  author    Member   @relation("NoteAuthor", fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId, createdAt])
+  @@index([orgId])
 }
 
 model AuditLog {
