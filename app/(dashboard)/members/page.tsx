@@ -97,6 +97,8 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
 
           <FrostCard>
             <MembersTable
+              cycleId={activeCycle?.id ?? null}
+              canReview={actor.authRole === "admin" || actor.authRole === "hod" || actor.authRole === "manager"}
               removableMemberIds={
                 actor.authRole === "admin" ? members.filter((m) => m.id !== actor.id).map((m) => m.id) : []
               }

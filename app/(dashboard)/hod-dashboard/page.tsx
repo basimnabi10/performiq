@@ -323,6 +323,44 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
     };
   });
 
+  // "Overall" sits at the front of the KPI filter and answers the question a
+  // per-KPI view cannot: who is strongest across all of them. Each person is
+  // averaged over the KPIs they were actually scored on, so someone rated on
+  // four does not lose to someone rated on one.
+  const overallByMember = new Map<string, { total: number; count: number }>();
+  for (const score of memberKpiScores) {
+    const current = overallByMember.get(score.memberId) ?? { total: 0, count: 0 };
+    current.total += Number(score.score);
+    current.count += 1;
+    overallByMember.set(score.memberId, current);
+  }
+
+  const overallLeaders = [...overallByMember.entries()]
+    .map(([memberId, { total, count }]) => ({
+      memberId,
+      name: members.find((m) => m.id === memberId)?.name ?? "Unknown",
+      score: total / count,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+
+  const overallAverage = overallLeaders.length
+    ? [...overallByMember.values()].reduce((sum, v) => sum + v.total / v.count, 0) / overallByMember.size
+    : null;
+
+  const kpiPanelEntriesWithOverall = [
+    {
+      kpiId: "__overall__",
+      name: "Overall",
+      icon: "ant-design:trophy-outlined",
+      quantifier: "combined",
+      target: `across ${kpis.length} KPIs`,
+      teamAvg: overallAverage,
+      leaders: overallLeaders,
+    },
+    ...kpiPanelEntries,
+  ];
+
   // ---- Pending actions ----
   const pendingReviews = reviews.filter((r) => r.status === "pending" || r.status === "in_progress").length;
   const learningNotStarted = learningAssignments.filter((a) => a.status === "not_started").length;
@@ -593,20 +631,11 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           <span style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
             Performance by KPI
           </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontSize: 12, color: "#596392" }}>
-              {selectedTeam ? selectedTeam.name : "All teams"} · ranked by KPI score
-            </span>
-            <Link
-              href={`/performance?month=${selectedMonthKey}${selectedTeam ? `&team=${selectedTeam.id}` : ""}`}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 500, color: "#273FF9", textDecoration: "none" }}
-            >
-              View all
-              <iconify-icon icon="ant-design:arrow-right-outlined" width="13" />
-            </Link>
-          </div>
+          <span style={{ fontSize: 12, color: "#596392" }}>
+            {selectedTeam ? selectedTeam.name : "All teams"} · ranked by KPI score
+          </span>
         </div>
-        <KpiPerformancePanel kpis={kpiPanelEntries} />
+        <KpiPerformancePanel kpis={kpiPanelEntriesWithOverall} />
 
         {isDeptWideView ? (
           <>
