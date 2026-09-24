@@ -415,26 +415,6 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           </div>
           </KpiDrawerHost>
 
-          <Link
-            href="/reviews"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 11,
-              padding: "15px 18px",
-              background: "rgba(39,63,249,.07)",
-              border: "1px solid rgba(39,63,249,.15)",
-              borderRadius: 16,
-              textDecoration: "none",
-            }}
-          >
-            <iconify-icon icon="ant-design:file-done-outlined" width="18" style={{ color: "#273FF9", flexShrink: 0 }} />
-            <div style={{ flex: 1, fontSize: 13, color: "#454D7A", lineHeight: 1.5 }}>
-              These KPIs appear as weighted 1–5 rating rows on every {selectedTeam.name} review form for all three months of this quarter. Each reviewer&rsquo;s
-              scores roll up by weight into the member&rsquo;s overall performance score.
-            </div>
-            <iconify-icon icon="ant-design:arrow-right-outlined" width="16" style={{ color: "#273FF9", flexShrink: 0 }} />
-          </Link>
         </>
       )}
     </div>
