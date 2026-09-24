@@ -632,3 +632,14 @@ iconify-icon {
   border-color: rgba(58, 99, 250, 0.45);
   box-shadow: var(--focus-ring);
 }
+
+/* The wizard's step rail spans the modal, with the connectors taking the
+   spare width. On a phone the three labels plus their numbers no longer fit
+   on one line, and the rail wrapped with a connector dangling at the end of
+   the first row. Only the step you are on is named there; the others stay as
+   numbers, which is enough to show where you are. */
+@media (max-width: 480px) {
+  .piq-steprail-label[data-current="false"] {
+    display: none;
+  }
+}

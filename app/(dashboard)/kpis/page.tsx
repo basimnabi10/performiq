@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
-import { findActiveCycle, findActiveQuarter } from "@/lib/cycles";
+import { findActiveCycle, findActiveQuarterForTeam } from "@/lib/cycles";
 import { quarterLabel } from "@/lib/quarters";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
 import { ImportKpisButton } from "@/components/kpis/ImportKpisButton";
@@ -35,8 +35,6 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   });
 
   const activeCycle = await findActiveCycle(actor);
-  // KPIs are owned by the quarter: one set of targets covers its three months.
-  const activeQuarter = await findActiveQuarter(actor);
 
   if (teams.length === 0) {
     return (
@@ -48,6 +46,19 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   }
 
   const selectedTeam = teams.find((t) => t.id === teamParam) ?? teams[0];
+
+  // KPIs are owned by the quarter: one set of targets covers its three
+  // months. Which quarter that is depends on the team being shown, not on who
+  // is looking — an admin sees every department's quarter.
+  const activeQuarter = await findActiveQuarterForTeam(actor.orgId, selectedTeam);
+
+  // A KPI hangs off one quarter, and that quarter belongs to one department,
+  // so it can only apply to teams in that department. Offering the rest let a
+  // KPI be created against another department's quarter, where its own team's
+  // page would never find it.
+  const teamsForQuarter = activeQuarter?.departmentId
+    ? teams.filter((t) => t.departmentId === activeQuarter.departmentId)
+    : teams;
 
   // Shared across the org, so every team picks from the same list.
   const kpiCategories = await prisma.kpiCategory.findMany({
@@ -260,7 +271,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           {canManage && activeQuarter ? (
             <CreateKpiWizard
               quarterId={activeQuarter.id}
-              teams={teams.map((t) => ({ id: t.id, name: t.name, memberCount: t._count?.members ?? 0 }))}
+              teams={teamsForQuarter.map((t) => ({ id: t.id, name: t.name, memberCount: t._count?.members ?? 0 }))}
               categories={kpiCategories}
               existingWeights={allQuarterWeights}
               defaultTeamId={selectedTeam.id}

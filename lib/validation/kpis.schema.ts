@@ -7,6 +7,8 @@ export const createKpiSchema = z.object({
   categoryId: z.string().optional(),
   rubric: z.string().trim().max(2000).optional(),
   lifecycle: z.enum(["draft", "active"]).default("active"),
+  /** Publish to the organization KPI library so other teams can adopt it. */
+  shareable: z.boolean().default(false),
   /** Other KPI weights the wizard rebalanced, saved in the same write. */
   weightEdits: z
     .array(z.object({ kpiTeamId: z.string().min(1), weightPct: z.number().int().min(0).max(100) }))

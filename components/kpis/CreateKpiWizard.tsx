@@ -54,6 +54,7 @@ export function CreateKpiWizard({
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [rubric, setRubric] = useState("");
+  const [shareable, setShareable] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
     () => new Set(defaultTeamId ? [defaultTeamId] : teams[0] ? [teams[0].id] : []),
   );
@@ -89,6 +90,7 @@ export function CreateKpiWizard({
     setDescription("");
     setCategoryId("");
     setRubric("");
+    setShareable(false);
     setMode("auto");
     setWeights({});
   }
@@ -138,6 +140,7 @@ export function CreateKpiWizard({
       rubric: rubric.trim() || undefined,
       cadence: "quarterly",
       lifecycle,
+      shareable,
       teamWeights: teamIds.map((teamId) => ({
         teamId,
         weightPct: weightsFor(teamId).find((w) => w.id === NEW_KPI_ID)?.weightPct ?? 0,
@@ -381,6 +384,35 @@ export function CreateKpiWizard({
                 Confirm the details before saving. A draft is not scored on until you publish it.
               </div>
             </div>
+
+            <label
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 11,
+                padding: "13px 15px",
+                borderRadius: 14,
+                cursor: "pointer",
+                background: shareable ? "rgba(39,63,249,.07)" : "rgba(255,255,255,.45)",
+                border: shareable ? "1px solid rgba(39,63,249,.28)" : "1px solid rgba(168,175,203,.35)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={shareable}
+                onChange={(e) => setShareable(e.target.checked)}
+                style={{ width: 17, height: 17, marginTop: 1, accentColor: "#273FF9", flexShrink: 0, cursor: "pointer" }}
+              />
+              <span>
+                <span style={{ display: "block", fontSize: 13.5, fontWeight: 500, color: "var(--text-strong)" }}>
+                  Add to the organization KPI library
+                </span>
+                <span className="piq-caption" style={{ display: "block", marginTop: 2, lineHeight: 1.5 }}>
+                  Other teams can find it under KPI library and adopt it at their own weight. The name, description and
+                  rating guidance stay shared, so editing it later reaches everyone using it.
+                </span>
+              </span>
+            </label>
 
             <dl style={{ display: "flex", flexDirection: "column", gap: 10, margin: 0 }}>
               <SummaryRow label="KPI name" value={name} />

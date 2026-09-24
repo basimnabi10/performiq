@@ -29,6 +29,24 @@ export const createKpi = authActionClient
     if (teams.length !== parsedInput.teamWeights.length) {
       throw new Error("One or more selected teams could not be found.");
     }
+
+    // A KPI hangs off one quarter, and a quarter belongs to one department.
+    // Applying it to a team in another department would file it under that
+    // department's quarter, where the team's own KPI page — which resolves
+    // the quarter from the team — would never look for it.
+    const quarter = await prisma.quarter.findUnique({
+      where: { id: parsedInput.quarterId },
+      select: { departmentId: true, teamId: true },
+    });
+    if (!quarter) throw new Error("That quarter no longer exists.");
+    if (quarter.departmentId) {
+      const strays = teams.filter((t) => t.departmentId !== quarter.departmentId);
+      if (strays.length) {
+        throw new Error(
+          `${strays.map((t) => t.name).join(" and ")} ${strays.length === 1 ? "is" : "are"} in a different department, which runs its own quarter. Create the KPI from that department's KPI page instead.`,
+        );
+      }
+    }
     for (const team of teams) {
       await requireScopeAccess(actor, { teamId: team.id });
     }
@@ -86,6 +104,7 @@ export const createKpi = authActionClient
           unit: null,
           cadence: parsedInput.cadence,
           lifecycle: parsedInput.lifecycle,
+          shareable: parsedInput.shareable,
           status: "new",
         },
       });
@@ -392,6 +411,19 @@ export const adoptKpi = authActionClient
     if (!team || team.orgId !== actor.orgId) throw new Error("Team not found.");
     if (!kpi.shareable) throw new Error("That KPI is not shared with other teams.");
     await requireScopeAccess(actor, { teamId: team.id, departmentId: team.departmentId });
+
+    // Adopting links the team to the existing KPI, which stays on its own
+    // quarter. Across departments that quarter is the wrong one and the KPI
+    // would not appear on this team's page at all.
+    const kpiQuarter = await prisma.quarter.findUnique({
+      where: { id: kpi.quarterId },
+      select: { departmentId: true },
+    });
+    if (kpiQuarter?.departmentId && kpiQuarter.departmentId !== team.departmentId) {
+      throw new Error(
+        `${kpi.name} belongs to another department's quarter, so ${team.name} cannot use it directly. Recreate it on this department's KPI page.`,
+      );
+    }
 
     const already = await prisma.kpiTeam.findUnique({
       where: { kpiId_teamId: { kpiId: kpi.id, teamId: team.id } },

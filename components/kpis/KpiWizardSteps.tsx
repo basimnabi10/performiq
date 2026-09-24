@@ -14,7 +14,7 @@ export function StepRail({ step }: { step: 1 | 2 | 3 }) {
     { n: 3 as const, label: "Review" },
   ];
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", rowGap: 10 }}>
+    <div style={{ display: "flex", alignItems: "center", width: "100%", gap: 14, flexWrap: "wrap", rowGap: 10 }}>
       {steps.map((s, i) => {
         const done = step > s.n;
         const current = step === s.n;
@@ -39,6 +39,8 @@ export function StepRail({ step }: { step: 1 | 2 | 3 }) {
                 {done ? <iconify-icon icon="ant-design:check-outlined" width={12} /> : s.n}
               </span>
               <span
+                className="piq-steprail-label"
+                data-current={String(current)}
                 style={{
                   fontSize: 13,
                   fontWeight: current ? 500 : 400,
@@ -50,7 +52,7 @@ export function StepRail({ step }: { step: 1 | 2 | 3 }) {
               </span>
             </div>
             {i < steps.length - 1 ? (
-              <span style={{ width: 28, height: 1, flexShrink: 0, background: "rgba(168,175,203,.5)" }} />
+              <span style={{ flex: "1 1 24px", minWidth: 16, height: 1, background: "rgba(168,175,203,.5)" }} />
             ) : null}
           </Fragment>
         );

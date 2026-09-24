@@ -96,6 +96,35 @@ export function quarterScopeWhere(scope: CycleScope): Prisma.QuarterWhereInput {
   };
 }
 
+/**
+ * The open quarter that owns a given team's KPIs.
+ *
+ * Quarters are scoped — org-wide, per department, or per team — so "the
+ * active quarter" is only meaningful relative to a team. findActiveQuarter
+ * below answers it for a *viewer*, which for an admin means any quarter in
+ * the org: with one quarter per department that picks an arbitrary one, and
+ * a page showing a team then filtered its KPIs by another department's
+ * quarter and found none.
+ */
+export async function findActiveQuarterForTeam(
+  orgId: string,
+  team: { id: string; departmentId: string; runsOwnCycles?: boolean },
+) {
+  const scopes: { departmentId: string | null; teamId: string | null }[] = [
+    ...(team.runsOwnCycles ? [{ departmentId: null, teamId: team.id }] : []),
+    { departmentId: team.departmentId, teamId: null },
+    { departmentId: null, teamId: null },
+  ];
+  for (const scope of scopes) {
+    const quarter = await prisma.quarter.findFirst({
+      where: { orgId, status: "in_progress", ...scope },
+      orderBy: [{ year: "desc" }, { index: "desc" }],
+    });
+    if (quarter) return quarter;
+  }
+  return null;
+}
+
 /** The quarter a viewer is currently in, if one is open. */
 export async function findActiveQuarter(scope: CycleScope) {
   return prisma.quarter.findFirst({
