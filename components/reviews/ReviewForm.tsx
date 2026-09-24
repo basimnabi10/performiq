@@ -43,10 +43,16 @@ export function ReviewForm({
   readOnly,
   readOnlyReason,
   returnTo,
+  submitted = false,
+  submittedLabel,
 }: {
   reviewId: string;
   kpis: ReviewFormKpi[];
   readOnly: boolean;
+  /** The review has been submitted and the member can already see it. */
+  submitted?: boolean;
+  /** When it was submitted, formatted on the server to keep dates stable. */
+  submittedLabel?: string;
   /** Where to go once the review is saved or submitted — the member list the
    * reviewer is working through. */
   returnTo?: string;
@@ -61,6 +67,18 @@ export function ReviewForm({
   const [comments, setComments] = useState<Record<string, string>>(
     Object.fromEntries(kpis.map((k) => [k.kpiId, k.initialComment ?? ""])),
   );
+
+  // A submitted review opens locked even when the viewer is allowed to change
+  // it. Someone has already been shown these scores, so re-opening them is a
+  // decision rather than something you drift into by clicking a rating.
+  const [editing, setEditing] = useState(false);
+  const locked = readOnly || (submitted && !editing);
+
+  function discardEdits() {
+    setRatings(Object.fromEntries(kpis.map((k) => [k.kpiId, k.initialRating ?? 0])));
+    setComments(Object.fromEntries(kpis.map((k) => [k.kpiId, k.initialComment ?? ""])));
+    setEditing(false);
+  }
 
   const router = useRouter();
 
@@ -124,6 +142,45 @@ export function ReviewForm({
           <iconify-icon icon="ant-design:lock-outlined" width={16} style={{ color: "#596392", flexShrink: 0 }} />
           <div style={{ fontSize: 13, color: "#454D7A", lineHeight: 1.5 }}>{readOnlyReason}</div>
         </div>
+      ) : submitted && !editing ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            padding: "13px 16px",
+            background: "rgba(31,122,72,.09)",
+            border: "1px solid rgba(31,122,72,.25)",
+            borderRadius: 14,
+          }}
+        >
+          <iconify-icon icon="ant-design:check-circle-outlined" width={16} style={{ color: "#1F7A48", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 220, fontSize: 13, color: "#454D7A", lineHeight: 1.5 }}>
+            {submittedLabel ? `Submitted ${submittedLabel}.` : "This review has been submitted."} The member can see
+            these scores.
+          </div>
+          <Button variant="secondary" size="sm" icon="ant-design:edit-outlined" onClick={() => setEditing(true)}>
+            Edit review
+          </Button>
+        </div>
+      ) : submitted && editing ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "13px 16px",
+            background: "rgba(39,63,249,.07)",
+            border: "1px solid rgba(39,63,249,.20)",
+            borderRadius: 14,
+          }}
+        >
+          <iconify-icon icon="ant-design:edit-outlined" width={16} style={{ color: "#273FF9", flexShrink: 0 }} />
+          <div style={{ fontSize: 13, color: "#454D7A", lineHeight: 1.5 }}>
+            Editing a review the member has already seen. Saving replaces the scores they were shown.
+          </div>
+        </div>
       ) : null}
 
       {kpis.map((k) => (
@@ -183,16 +240,16 @@ export function ReviewForm({
               <button
                 key={n}
                 type="button"
-                disabled={readOnly}
+                disabled={locked}
                 onClick={() => setRatings((r) => ({ ...r, [k.kpiId]: n }))}
                 style={{
                   width: 36,
                   height: 36,
                   borderRadius: "50%",
                   border: "none",
-                  cursor: readOnly ? "not-allowed" : "pointer",
+                  cursor: locked ? "not-allowed" : "pointer",
                   fontWeight: 500,
-                  opacity: readOnly ? 0.55 : 1,
+                  opacity: locked ? 0.55 : 1,
                   background:
                     (ratings[k.kpiId] ?? 0) >= n
                       ? "linear-gradient(135deg,#3A63FA,#273FF9)"
@@ -206,7 +263,7 @@ export function ReviewForm({
           </div>
           <textarea
             placeholder="Comment (optional)"
-            disabled={readOnly}
+            disabled={locked}
             value={comments[k.kpiId] ?? ""}
             onChange={(e) => setComments((c) => ({ ...c, [k.kpiId]: e.target.value }))}
             rows={2}
@@ -240,13 +297,23 @@ export function ReviewForm({
         </div>
       ) : null}
 
-      {!readOnly ? (
+      {!locked ? (
         <div style={{ display: "flex", gap: 10 }}>
-          <Button variant="secondary" disabled={busy} onClick={() => draftAction.execute(payload())}>
-            {draftAction.isExecuting ? "Saving…" : "Save draft"}
-          </Button>
+          {submitted ? (
+            <Button variant="secondary" disabled={busy} onClick={discardEdits}>
+              Cancel
+            </Button>
+          ) : (
+            <Button variant="secondary" disabled={busy} onClick={() => draftAction.execute(payload())}>
+              {draftAction.isExecuting ? "Saving…" : "Save draft"}
+            </Button>
+          )}
           <Button disabled={busy} onClick={() => submitAction.execute(payload())}>
-            {submitAction.isExecuting ? "Submitting…" : "Submit review"}
+            {submitAction.isExecuting
+              ? "Saving…"
+              : submitted
+                ? "Save changes"
+                : "Submit review"}
           </Button>
         </div>
       ) : null}

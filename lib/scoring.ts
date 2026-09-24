@@ -102,9 +102,16 @@ export async function recomputeMemberKpiScores(
  */
 export async function completeReview(reviewId: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    const before = await tx.review.findUnique({ where: { id: reviewId }, select: { submittedAt: true } });
     const review = await tx.review.update({
       where: { id: reviewId },
-      data: { status: "completed", submittedAt: new Date() },
+      data: {
+        status: "completed",
+        // Revising a submitted review must not rewrite when it was submitted:
+        // the member was told a date, and updatedAt already carries the
+        // revision.
+        submittedAt: before?.submittedAt ?? new Date(),
+      },
     });
 
     const overallScore = await computeWeightedOverallScore(tx, reviewId);

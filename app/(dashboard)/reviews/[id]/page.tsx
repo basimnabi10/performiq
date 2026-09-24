@@ -195,6 +195,12 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
             kpis={kpis}
             readOnly={readOnly}
             readOnlyReason={readOnlyReason}
+            submitted={review.status === "completed"}
+            submittedLabel={
+              review.submittedAt
+                ? review.submittedAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+                : undefined
+            }
             returnTo={review.reviewee.teamId ? `/kpi-review/${review.reviewee.teamId}` : undefined}
           />
         </>
