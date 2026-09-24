@@ -78,6 +78,9 @@ enum KpiCadence {
 enum KpiLifecycle {
   draft
   active
+  /// Retired: kept for the scores already recorded against it, but left out
+  /// of new review forms and of the weight budget.
+  archived
 }
 
 enum KpiStatus {

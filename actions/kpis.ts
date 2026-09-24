@@ -6,6 +6,7 @@ import { AuthzError, requireRole, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { assertWeightBudget } from "@/lib/kpi-weight";
 import { formatKpiMeasurement } from "@/lib/kpi-status";
+import { logActivity } from "@/lib/audit";
 import {
   createKpiSchema,
   createTeamKpiSchema,
@@ -15,6 +16,8 @@ import {
   importKpisSchema,
   adoptKpiSchema,
   setKpiShareableSchema,
+  updateKpiSchema,
+  setKpiLifecycleSchema,
 } from "@/lib/validation/kpis.schema";
 
 export const createKpi = authActionClient
@@ -458,4 +461,102 @@ export const setKpiShareable = authActionClient
     await prisma.kpi.update({ where: { id: kpi.id }, data: { shareable: parsedInput.shareable } });
     revalidatePath("/kpis");
     return { shareable: parsedInput.shareable };
+  });
+
+/**
+ * Edits a KPI in place. Its weight is not here: a KPI carries a different
+ * weight on every team that uses it, so weights are edited per team against
+ * that team's 100% budget.
+ */
+export const updateKpi = authActionClient
+  .schema(updateKpiSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const kpi = await prisma.kpi.findUnique({
+      where: { id: parsedInput.kpiId },
+      include: { kpiTeams: { select: { teamId: true } } },
+    });
+    if (!kpi || kpi.orgId !== actor.orgId) throw new Error("KPI not found.");
+    for (const kt of kpi.kpiTeams) await requireScopeAccess(actor, { teamId: kt.teamId });
+
+    await prisma.kpi.update({
+      where: { id: kpi.id },
+      data: {
+        name: parsedInput.name,
+        description: parsedInput.description || null,
+        categoryId: parsedInput.categoryId || null,
+        rubric: parsedInput.rubric || null,
+        shareable: parsedInput.shareable,
+      },
+    });
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: `edited the KPI "${parsedInput.name}"`,
+      targetType: "Kpi",
+      targetId: kpi.id,
+    });
+
+    revalidatePath("/kpis");
+    return { name: parsedInput.name };
+  });
+
+/**
+ * Publishes a draft, sends one back to draft, or retires it.
+ *
+ * Retiring is archiving rather than deleting: reviews have already been
+ * scored against this KPI and those scores belong to people's records. An
+ * archived KPI keeps its history but is left out of new review forms and of
+ * the team's weight budget, so the freed weight can be given to something
+ * that is actually scored.
+ */
+export const setKpiLifecycle = authActionClient
+  .schema(setKpiLifecycleSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin", "hod"]);
+
+    const kpi = await prisma.kpi.findUnique({
+      where: { id: parsedInput.kpiId },
+      include: { kpiTeams: { select: { teamId: true, weightPct: true } } },
+    });
+    if (!kpi || kpi.orgId !== actor.orgId) throw new Error("KPI not found.");
+    for (const kt of kpi.kpiTeams) await requireScopeAccess(actor, { teamId: kt.teamId });
+
+    // Coming back out of the archive has to fit the budget again — the weight
+    // it used to hold may since have been given to another KPI.
+    if (kpi.lifecycle === "archived" && parsedInput.lifecycle !== "archived") {
+      await prisma.$transaction(async (tx) => {
+        for (const kt of kpi.kpiTeams) {
+          await assertWeightBudget(tx, {
+            teamId: kt.teamId,
+            quarterId: kpi.quarterId,
+            addWeight: kt.weightPct,
+            excludeKpiId: kpi.id,
+          });
+        }
+        await tx.kpi.update({ where: { id: kpi.id }, data: { lifecycle: parsedInput.lifecycle } });
+      });
+    } else {
+      await prisma.kpi.update({ where: { id: kpi.id }, data: { lifecycle: parsedInput.lifecycle } });
+    }
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb:
+        parsedInput.lifecycle === "archived"
+          ? `archived the KPI "${kpi.name}"`
+          : parsedInput.lifecycle === "active"
+            ? `published the KPI "${kpi.name}"`
+            : `sent the KPI "${kpi.name}" back to draft`,
+      targetType: "Kpi",
+      targetId: kpi.id,
+    });
+
+    revalidatePath("/kpis");
+    return { lifecycle: parsedInput.lifecycle, name: kpi.name };
   });

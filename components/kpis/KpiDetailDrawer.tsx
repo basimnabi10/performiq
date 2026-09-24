@@ -11,7 +11,7 @@ export interface KpiDetail {
   description: string | null;
   rubric: string | null;
   categoryName: string | null;
-  lifecycle: "draft" | "active";
+  lifecycle: "draft" | "active" | "archived";
   /** Listed in the org library for other teams to adopt. */
   shareable: boolean;
   metricType: string;
@@ -19,7 +19,7 @@ export interface KpiDetail {
   target: string;
   unit: string;
   currentValue: string | null;
-  weightPct: number;
+  weightPct: number | null;
   avgScore: number | null;
   ownerName: string | null;
   /** Everyone scored on this KPI in the open month, best first. */
@@ -65,9 +65,12 @@ export function KpiDetailDrawer({
   if (!kpi) return null;
   const isShared = share.result.data ? share.result.data.shareable : (shared || kpi.shareable);
 
-  const tone = kpi.lifecycle === "draft"
-    ? { label: "Draft", bg: "rgba(250,173,20,.18)", color: "#8A5D00" }
-    : { label: "Active", bg: "rgba(47,191,113,.16)", color: "#1B7A48" };
+  const tone =
+    kpi.lifecycle === "draft"
+      ? { label: "Draft", bg: "rgba(250,173,20,.18)", color: "#8A5D00" }
+      : kpi.lifecycle === "archived"
+        ? { label: "Archived", bg: "rgba(89,99,146,.16)", color: "#454D7A" }
+        : { label: "Active", bg: "rgba(47,191,113,.16)", color: "#1B7A48" };
 
   return (
     <div
@@ -133,7 +136,7 @@ export function KpiDetailDrawer({
         ) : null}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 12 }}>
-          <Stat label="Weight on this team" value={`${kpi.weightPct}%`} />
+          {kpi.weightPct != null ? <Stat label="Weight on this team" value={`${kpi.weightPct}%`} /> : null}
           {kpi.target ? <Stat label="Target" value={`${kpi.target}${kpi.unit ? ` ${kpi.unit}` : ""}`} /> : null}
           <Stat label="Recorded value" value={kpi.currentValue ?? "—"} />
           <Stat label="Average rating" value={kpi.avgScore != null ? `${kpi.avgScore.toFixed(1)}/5` : "—"} />

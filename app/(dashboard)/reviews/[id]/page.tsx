@@ -85,7 +85,12 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
 
   const kpiTeams = review.reviewee.teamId
     ? await prisma.kpiTeam.findMany({
-        where: { teamId: review.reviewee.teamId, kpi: { quarterId: review.cycle.quarterId ?? "" } },
+        where: {
+          teamId: review.reviewee.teamId,
+          // Retired KPIs keep the scores already given against them, but no
+          // new review asks about them.
+          kpi: { quarterId: review.cycle.quarterId ?? "", lifecycle: { not: "archived" } },
+        },
         include: { kpi: true },
       })
     : [];

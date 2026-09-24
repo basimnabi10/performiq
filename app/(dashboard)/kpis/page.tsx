@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
@@ -6,13 +5,13 @@ import { findActiveCycle, findActiveQuarterForTeam } from "@/lib/cycles";
 import { quarterLabel } from "@/lib/quarters";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
 import { ImportKpisButton } from "@/components/kpis/ImportKpisButton";
-import { KpiDrawerHost } from "@/components/kpis/KpiDrawerHost";
+import { KpiLibraryTable, type KpiLibraryRow } from "@/components/kpis/KpiLibraryTable";
+import type { KpiDetail } from "@/components/kpis/KpiDetailDrawer";
 import { KpiLibraryDrawer } from "@/components/kpis/KpiLibraryDrawer";
 import { CreateKpiWizard } from "@/components/kpis/CreateKpiWizard";
-import { METRIC_ICON } from "@/components/kpis/TeamKpiCreateModal";
-import { KpiCurrentCell } from "@/components/kpis/KpiCurrentCell";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { kpiMeasurementStatus } from "@/lib/kpi-status";
+
+const ALL_TEAMS = "all";
 
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const actor = await getCurrentMember();
@@ -45,12 +44,26 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
     );
   }
 
-  const selectedTeam = teams.find((t) => t.id === teamParam) ?? teams[0];
+  // "View all" is not a team: it shows every team's KPIs at once, which
+  // means there is no single quarter, weight budget or team to create
+  // against. The controls that need one are disabled while it is on.
+  const viewingAll = teamParam === ALL_TEAMS;
+  const selectedTeam = viewingAll ? null : (teams.find((t) => t.id === teamParam) ?? teams[0]);
 
   // KPIs are owned by the quarter: one set of targets covers its three
   // months. Which quarter that is depends on the team being shown, not on who
   // is looking — an admin sees every department's quarter.
-  const activeQuarter = await findActiveQuarterForTeam(actor.orgId, selectedTeam);
+  const activeQuarter = selectedTeam ? await findActiveQuarterForTeam(actor.orgId, selectedTeam) : null;
+
+  // Every quarter in view: one per department when showing all teams.
+  const quartersInView = selectedTeam
+    ? activeQuarter
+      ? [activeQuarter]
+      : []
+    : (
+        await Promise.all(teams.map((t) => findActiveQuarterForTeam(actor.orgId, t)))
+      ).filter((q): q is NonNullable<typeof q> => q != null);
+  const quarterIds = [...new Set(quartersInView.map((q) => q.id))];
 
   // A KPI hangs off one quarter, and that quarter belongs to one department,
   // so it can only apply to teams in that department. Offering the rest let a
@@ -109,23 +122,30 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       }))
     : [];
 
-  const kpiTeams = activeQuarter
+  // One KpiTeam row per team a KPI is used by, across every quarter in view.
+  const kpiTeams = quarterIds.length
     ? await prisma.kpiTeam.findMany({
-        where: { teamId: selectedTeam.id, kpi: { quarterId: activeQuarter.id } },
+        where: {
+          kpi: { quarterId: { in: quarterIds } },
+          ...(selectedTeam ? { teamId: selectedTeam.id } : { teamId: { in: teams.map((t) => t.id) } }),
+        },
         include: {
           kpi: {
             include: {
-              category: { select: { name: true } },
+              category: { select: { id: true, name: true } },
               owner: { select: { name: true } },
             },
           },
+          team: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: "asc" },
       })
     : [];
 
-  const teamMembers = await prisma.member.findMany({ where: { teamId: selectedTeam.id }, select: { id: true } });
-  const memberIds = teamMembers.map((m) => m.id);
+  const memberWhere = selectedTeam ? { teamId: selectedTeam.id } : { teamId: { in: teams.map((t) => t.id) } };
+  const teamMemberRecords = await prisma.member.findMany({ where: memberWhere, select: { id: true, name: true } });
+  const memberIds = teamMemberRecords.map((m) => m.id);
+  const teamMemberNames = new Map(teamMemberRecords.map((m) => [m.id, m.name]));
 
   const memberKpiScores = activeCycle
     ? await prisma.memberKpiScore.findMany({
@@ -133,142 +153,125 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       })
     : [];
 
-  const teamMemberRecords = await prisma.member.findMany({
-    where: { id: { in: memberIds } },
-    select: { id: true, name: true },
-  });
-  const teamMemberNames = new Map(teamMemberRecords.map((m) => [m.id, m.name]));
+  // A KPI is listed once however many teams use it. Its weight is per team,
+  // so with several teams in view the spread is shown instead of one bar.
+  const byKpi = new Map<string, typeof kpiTeams>();
+  for (const kt of kpiTeams) {
+    const bucket = byKpi.get(kt.kpiId);
+    if (bucket) bucket.push(kt);
+    else byKpi.set(kt.kpiId, [kt]);
+  }
 
-  const kpiRows = kpiTeams.map((kt) => {
-    const scores = memberKpiScores.filter((s) => s.kpiId === kt.kpiId);
+  const rows: KpiLibraryRow[] = [];
+  const details: Record<string, KpiDetail> = {};
+
+  for (const [kpiId, links] of byKpi) {
+    const kpi = links[0].kpi;
+    const weights = links.map((l) => l.weightPct);
+    const scores = memberKpiScores.filter((s) => s.kpiId === kpiId);
     const avgScore = scores.length ? scores.reduce((s, r) => s + Number(r.score), 0) / scores.length : null;
-    return {
-      kpiTeamId: kt.id,
-      kpiId: kt.kpiId,
-      name: kt.kpi.name,
-      icon: METRIC_ICON[kt.kpi.metricType as keyof typeof METRIC_ICON] ?? "ant-design:aim-outlined",
-      quantifier:
-        kt.kpi.description ||
-        (kt.kpi.targetValue
-          ? `Quantifier: ${kt.kpi.metricType}, ${kt.kpi.direction === "lower_is_better" ? "lower" : "higher"} is better`
-          : "Scored 1–5 against its rubric"),
-      target: kt.kpi.targetValue,
-      unit: kt.kpi.unit ?? kt.kpi.metricType,
-      weightPct: kt.weightPct,
-      avgScore,
-      currentValue: kt.kpi.currentValue,
-      currentNumeric: kt.kpi.currentNumeric != null ? String(kt.kpi.currentNumeric) : null,
-      // Derived from the recorded measurement vs the target (same unit), not
-      // from Kpi.status, which is only a creation-time default and never moves.
-      measurementStatus: kpiMeasurementStatus(kt.kpi.currentNumeric, kt.kpi),
-      hasTarget: kt.kpi.targetNumeric != null,
-      // Everything the side drawer shows, assembled here so opening it costs
-      // no extra request.
-      detail: {
-        kpiId: kt.kpiId,
-        name: kt.kpi.name,
-        description: kt.kpi.description,
-        rubric: kt.kpi.rubric,
-        categoryName: kt.kpi.category?.name ?? null,
-        lifecycle: kt.kpi.lifecycle,
-        shareable: kt.kpi.shareable,
-        metricType: kt.kpi.metricType,
-        direction: kt.kpi.direction,
-        target: kt.kpi.targetValue,
-        unit: kt.kpi.unit ?? kt.kpi.metricType,
-        currentValue: kt.kpi.currentValue,
-        weightPct: kt.weightPct,
-        avgScore,
-        ownerName: kt.kpi.owner?.name ?? null,
-        scores: scores
-          .map((sc) => ({
-            memberId: sc.memberId,
-            name: teamMemberNames.get(sc.memberId) ?? "Unknown",
-            score: Number(sc.score),
-          }))
-          .sort((a, b) => b.score - a.score),
-      },
-    };
-  });
 
-  const scoredRows = kpiRows.filter((r) => r.avgScore != null);
-  const weightedSum = scoredRows.reduce((s, r) => s + r.avgScore! * r.weightPct, 0);
-  const weightOfScored = scoredRows.reduce((s, r) => s + r.weightPct, 0);
-  const teamScore = weightOfScored ? weightedSum / weightOfScored : null;
-  const totalWeight = kpiTeams.reduce((s, kt) => s + kt.weightPct, 0);
-  const measuredRows = kpiRows.filter((r) => r.measurementStatus != null);
-  const onTargetCount = measuredRows.filter((r) => r.measurementStatus === "on").length;
-  const cadenceCounts = new Map<string, number>();
-  for (const kt of kpiTeams) cadenceCounts.set(kt.kpi.cadence, (cadenceCounts.get(kt.kpi.cadence) ?? 0) + 1);
-  const topCadence = Array.from(cadenceCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0];
-  const cadenceLabel = topCadence ? topCadence[0].toUpperCase() + topCadence.slice(1) : "—";
+    rows.push({
+      kpiId,
+      kpiTeamId: selectedTeam ? links[0].id : null,
+      name: kpi.name,
+      description: kpi.description,
+      rubric: kpi.rubric,
+      categoryId: kpi.category?.id ?? null,
+      categoryName: kpi.category?.name ?? null,
+      lifecycle: kpi.lifecycle,
+      shareable: kpi.shareable,
+      weightPct: selectedTeam ? links[0].weightPct : null,
+      spread: selectedTeam
+        ? null
+        : { teamCount: links.length, min: Math.min(...weights), max: Math.max(...weights) },
+      updatedLabel: timeAgo(kpi.updatedAt),
+    });
+
+    details[kpiId] = {
+      kpiId,
+      name: kpi.name,
+      description: kpi.description,
+      rubric: kpi.rubric,
+      categoryName: kpi.category?.name ?? null,
+      lifecycle: kpi.lifecycle,
+      shareable: kpi.shareable,
+      metricType: kpi.metricType,
+      direction: kpi.direction,
+      target: kpi.targetValue,
+      unit: kpi.unit ?? kpi.metricType,
+      currentValue: kpi.currentValue,
+      weightPct: selectedTeam ? links[0].weightPct : null,
+      avgScore,
+      ownerName: kpi.owner?.name ?? null,
+      scores: scores
+        .map((sc) => ({ memberId: sc.memberId, name: teamMemberNames.get(sc.memberId) ?? "Unknown", score: Number(sc.score) }))
+        .sort((a, b) => b.score - a.score),
+    };
+  }
+
+  rows.sort((a, b) => a.name.localeCompare(b.name));
+
+  const activeCount = rows.filter((r) => r.lifecycle === "active").length;
+  const draftCount = rows.filter((r) => r.lifecycle === "draft").length;
+  // Averaged over the team-KPI pairs, since that is where a weight lives.
+  const scoredWeights = kpiTeams.filter((kt) => kt.kpi.lifecycle !== "archived");
+  const averageWeight = scoredWeights.length
+    ? Math.round(scoredWeights.reduce((s, kt) => s + kt.weightPct, 0) / scoredWeights.length)
+    : null;
+  const totalWeight = selectedTeam
+    ? scoredWeights.reduce((s, kt) => s + kt.weightPct, 0)
+    : null;
 
   const canManage = actor.authRole === "admin" || actor.authRole === "hod";
+  const scopeLabel = selectedTeam ? selectedTeam.name : "All teams";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 13, color: "#767FA5", fontWeight: 500 }}>
-            {departmentName} · {selectedTeam.name}
+          <div style={{ fontSize: 13, color: "#767FA5", fontWeight: 500, letterSpacing: ".04em", textTransform: "uppercase" }}>
+            {departmentName} · {scopeLabel}
           </div>
-          <div style={{ fontSize: 28, fontWeight: 500, letterSpacing: "-.02em", color: "#181835", marginTop: 2 }}>KPIs</div>
-          <div style={{ fontSize: 14, color: "#596392", marginTop: 3 }}>
-            {kpiTeams.length} KPIs · scored on a 1–5 scale
-            {activeQuarter ? ` · used in every ${quarterLabel(activeQuarter.year, activeQuarter.index)} review form` : ""}
+          <div style={{ fontSize: 28, fontWeight: 500, letterSpacing: "-.02em", color: "#181835", marginTop: 4 }}>KPIs</div>
+          <div style={{ fontSize: 14, color: "#596392", marginTop: 4, maxWidth: 560, lineHeight: 1.55 }}>
+            Create and manage the key performance indicators used to evaluate employee performance
+            {quartersInView[0] ? ` in ${quarterLabel(quartersInView[0].year, quartersInView[0].index)}` : ""}.
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           {teams.length > 1 ? (
             <ScopePicker
-              selectedId={selectedTeam.id}
+              selectedId={selectedTeam?.id ?? ALL_TEAMS}
               basePath="/kpis"
-              options={teams.map((t) => ({
-                id: t.id,
-                label: t.name,
-                meta: `${t._count.members} members`,
-                icon: "ant-design:team-outlined",
-              }))}
+              options={[
+                {
+                  id: ALL_TEAMS,
+                  label: "View all",
+                  meta: `${teams.length} teams`,
+                  icon: "ant-design:appstore-outlined",
+                },
+                ...teams.map((t) => ({
+                  id: t.id,
+                  label: t.name,
+                  meta: `${t._count.members} members`,
+                  icon: "ant-design:team-outlined",
+                })),
+              ]}
             />
           ) : null}
-          <Link
-            href="/reviews"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 7,
-              fontSize: 13,
-              fontWeight: 500,
-              color: "#273FF9",
-              background: "rgba(255,255,255,.6)",
-              border: "1px solid rgba(255,255,255,.75)",
-              borderRadius: 12,
-              padding: "11px 16px",
-              textDecoration: "none",
-            }}
-          >
-            <iconify-icon icon="ant-design:file-done-outlined" width="15" />
-            Start review
-          </Link>
-          {canManage && activeQuarter ? (
+          {canManage && selectedTeam && activeQuarter ? (
             <KpiLibraryDrawer
-              kpis={libraryKpis.map((k) => ({
-                ...k,
-                alreadyOnThisTeam: kpiRows.some((r) => r.detail.kpiId === k.kpiId),
-              }))}
+              kpis={libraryKpis.map((k) => ({ ...k, alreadyOnThisTeam: rows.some((r) => r.kpiId === k.kpiId) }))}
               teamId={selectedTeam.id}
               teamName={selectedTeam.name}
-              remainingWeight={Math.max(0, 100 - totalWeight)}
+              remainingWeight={Math.max(0, 100 - (totalWeight ?? 0))}
             />
           ) : null}
-          {canManage && activeQuarter ? (
-            <ImportKpisButton
-              quarterId={activeQuarter.id}
-              teamId={selectedTeam.id}
-              teamName={selectedTeam.name}
-            />
+          {canManage && selectedTeam && activeQuarter ? (
+            <ImportKpisButton quarterId={activeQuarter.id} teamId={selectedTeam.id} teamName={selectedTeam.name} />
           ) : null}
-          {canManage && activeQuarter ? (
+          {canManage && selectedTeam && activeQuarter ? (
             <CreateKpiWizard
               quarterId={activeQuarter.id}
               teams={teamsForQuarter.map((t) => ({ id: t.id, name: t.name, memberCount: t._count?.members ?? 0 }))}
@@ -280,7 +283,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
         </div>
       </div>
 
-      {!activeQuarter ? (
+      {quarterIds.length === 0 ? (
         <EmptyState
           icon="ant-design:aim-outlined"
           title="No active quarter"
@@ -290,155 +293,92 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
         />
       ) : (
         <>
-          <div style={{ display: "flex", gap: 16 }}>
-            <SummaryCard label="Team KPI score" value={teamScore != null ? teamScore.toFixed(1) : "—"} unit="/5" />
-            <SummaryCard label="Total weight" value={`${totalWeight}%`} />
-            <SummaryCard
-              label="On / above target"
-              value={measuredRows.length ? `${onTargetCount} of ${measuredRows.length}` : "—"}
-            />
-            <SummaryCard label="Cadence" value={cadenceLabel} />
-          </div>
-
-          {kpiRows.length > 0 ? (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 150px 150px 90px 92px",
-                gap: 16,
-                padding: "0 20px",
-                fontSize: 11,
-                fontWeight: 500,
-                color: "#767FA5",
-                letterSpacing: ".05em",
-                textTransform: "uppercase",
-              }}
-            >
-              <div>KPI &amp; quantifier</div>
-              <div>Target</div>
-              <div>Current</div>
-              <div>Weight</div>
-              <div style={{ textAlign: "right" }}>Score</div>
+          {!selectedTeam ? (
+            <div className="piq-caption" style={{ lineHeight: 1.5 }}>
+              Showing every team&rsquo;s KPIs. Pick a team to add, import or adopt one — a KPI belongs to a team&rsquo;s
+              quarter, so there is no single budget to add to from here.
             </div>
           ) : null}
 
-          <KpiDrawerHost details={Object.fromEntries(kpiRows.map((r) => [r.kpiTeamId, r.detail]))} canManage={canManage}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {kpiRows.length === 0 ? (
-              <div
-                style={{
-                  background: "rgba(255,255,255,.20)",
-                  border: "1px solid rgba(255,255,255,.40)",
-                  WebkitBackdropFilter: "blur(35px)",
-                  backdropFilter: "blur(35px)",
-                  boxShadow: "0 8px 24px rgba(0,0,0,.06)",
-                  borderRadius: 20,
-                  padding: 20,
-                }}
-              >
-                <div className="piq-caption">No KPIs yet for this team&rsquo;s current quarter.</div>
-              </div>
-            ) : (
-              kpiRows.map((row) => (
-                <div
-                  key={row.kpiTeamId}
-                  data-kpi-id={row.kpiTeamId}
-                  style={{
-                    cursor: "pointer",
-                    background: "rgba(255,255,255,.20)",
-                    border: "1px solid rgba(255,255,255,.40)",
-                    WebkitBackdropFilter: "blur(35px)",
-                    backdropFilter: "blur(35px)",
-                    boxShadow: "0 8px 24px rgba(0,0,0,.06)",
-                    borderRadius: 20,
-                    padding: 20,
-                    display: "grid",
-                    gridTemplateColumns: "1fr 150px 150px 90px 92px",
-                    gap: 16,
-                    alignItems: "center",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
-                    <span
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 13,
-                        background: "rgba(58,99,250,.12)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#273FF9",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <iconify-icon icon={row.icon} width="21" />
-                    </span>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 500, color: "#181835" }}>{row.name}</div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "#767FA5",
-                          marginTop: 2,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {row.quantifier}
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>{row.target || "1–5"}</div>
-                    <div style={{ fontSize: 11, color: "#767FA5" }}>{row.target ? row.unit : "rating"}</div>
-                  </div>
-                  <KpiCurrentCell
-                    kpiId={row.kpiId}
-                    currentValue={row.currentValue}
-                    currentNumeric={row.currentNumeric}
-                    status={row.measurementStatus}
-                    hasTarget={row.hasTarget}
-                    canEdit={canManage}
-                  />
-                  <div style={{ fontSize: 15, fontWeight: 500, color: "#454D7A", fontVariantNumeric: "tabular-nums" }}>{row.weightPct}%</div>
-                  <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: 20, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>
-                      {row.avgScore != null ? row.avgScore.toFixed(1) : "—"}
-                    </span>
-                    <span style={{ fontSize: 12, color: "#A8AFCB" }}>{row.avgScore != null ? "/5" : " pending"}</span>
-                  </div>
-                </div>
-              ))
-            )}
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <SummaryCard
+              icon="ant-design:aim-outlined"
+              label="Total active KPIs"
+              value={String(activeCount)}
+              sub={selectedTeam ? `${totalWeight}% of the weight budget used` : "in the current framework"}
+            />
+            <SummaryCard
+              icon="ant-design:edit-outlined"
+              label="Draft KPIs"
+              value={String(draftCount)}
+              sub={draftCount === 0 ? "nothing waiting to publish" : `${draftCount} not scored on yet`}
+            />
+            <SummaryCard
+              icon="ant-design:percentage-outlined"
+              label="Average KPI weight"
+              value={averageWeight != null ? `${averageWeight}%` : "—"}
+              sub={selectedTeam ? "per KPI on this team" : "per KPI across teams"}
+            />
           </div>
-          </KpiDrawerHost>
 
+          <KpiLibraryTable rows={rows} details={details} categories={kpiCategories} canManage={canManage} />
         </>
       )}
     </div>
   );
 }
 
-function SummaryCard({ label, value, unit }: { label: string; value: string; unit?: string }) {
+/** "2d ago" style stamps, matching the rest of the app's activity feeds. */
+function timeAgo(date: Date): string {
+  const hours = Math.floor((Date.now() - date.getTime()) / 3_600_000);
+  if (hours < 1) return "Just now";
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+function SummaryCard({ icon, label, value, sub }: { icon: string; label: string; value: string; sub: string }) {
   return (
     <div
       style={{
-        flex: 1,
+        flex: "1 1 220px",
         background: "rgba(255,255,255,.20)",
         border: "1px solid rgba(255,255,255,.40)",
         WebkitBackdropFilter: "blur(35px)",
         backdropFilter: "blur(35px)",
         boxShadow: "0 8px 24px rgba(0,0,0,.06)",
-        borderRadius: 18,
-        padding: "16px 18px",
+        borderRadius: 22,
+        padding: "18px 20px",
       }}
     >
-      <div style={{ fontSize: 12, color: "#767FA5" }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums", marginTop: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 10,
+            background: "rgba(39,63,249,.10)",
+            color: "#273FF9",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <iconify-icon icon={icon} width="15" />
+        </span>
+        <span style={{ fontSize: 11.5, fontWeight: 500, color: "#767FA5", letterSpacing: ".05em", textTransform: "uppercase" }}>
+          {label}
+        </span>
+      </div>
+      <div style={{ fontSize: 30, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums", marginTop: 12 }}>
         {value}
-        {unit ? <span style={{ fontSize: 14, color: "#A8AFCB" }}>{unit}</span> : null}
+      </div>
+      <div className="piq-caption" style={{ marginTop: 4 }}>
+        {sub}
       </div>
     </div>
   );

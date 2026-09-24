@@ -21,7 +21,9 @@ export async function assertWeightBudget(
   const rows = await tx.kpiTeam.findMany({
     where: {
       teamId: args.teamId,
-      kpi: { quarterId: args.quarterId },
+      // An archived KPI is not scored any more, so holding weight it cannot
+      // use would keep the budget permanently short of 100%.
+      kpi: { quarterId: args.quarterId, lifecycle: { not: "archived" } },
       ...(args.excludeKpiId ? { kpiId: { not: args.excludeKpiId } } : {}),
     },
     select: { weightPct: true },

@@ -95,6 +95,22 @@ export const adoptKpiSchema = z.object({
   weightPct: z.number().int().min(0).max(100),
 });
 
+/** Editing a KPI in place. Weights are per team and edited separately. */
+export const updateKpiSchema = z.object({
+  kpiId: z.string().min(1),
+  name: z.string().trim().min(2, { error: "Enter a KPI name." }).max(80),
+  description: z.string().trim().max(500).optional(),
+  categoryId: z.string().optional(),
+  rubric: z.string().trim().max(2000).optional(),
+  shareable: z.boolean().default(false),
+});
+
+/** Publishing a draft, sending one back to draft, or retiring it. */
+export const setKpiLifecycleSchema = z.object({
+  kpiId: z.string().min(1),
+  lifecycle: z.enum(["draft", "active", "archived"]),
+});
+
 /** Publishing a KPI to the org library, or withdrawing it. */
 export const setKpiShareableSchema = z.object({
   kpiId: z.string().min(1),
