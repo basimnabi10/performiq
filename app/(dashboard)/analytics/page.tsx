@@ -76,7 +76,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
   const memberIds = members.map((m) => m.id);
 
   const kpiTeams = await prisma.kpiTeam.findMany({
-    where: { teamId: { in: scopeTeamIds }, kpi: { cycleId: cycle.id } },
+    where: { teamId: { in: scopeTeamIds }, kpi: { quarterId: cycle.quarterId ?? "" } },
     include: { kpi: true },
   });
   const kpiById = new Map(kpiTeams.map((kt) => [kt.kpiId, kt]));

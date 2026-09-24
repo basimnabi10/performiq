@@ -6,6 +6,9 @@ import { departmentCycleWhere, findActiveCycleForDepartment } from "@/lib/cycles
 import { DesignationModal } from "@/components/members/DesignationModal";
 import { MemberHero } from "@/components/members/MemberHero";
 import { MemberTrendChart } from "@/components/members/MemberTrendChart";
+import { ProfileSplitLayout } from "@/components/members/ProfileSplitLayout";
+import { CoachingNotes } from "@/components/notes/CoachingNotes";
+import { ReviewForm } from "@/components/reviews/ReviewForm";
 import { StartMemberReviewButton } from "@/components/members/StartMemberReviewButton";
 import { isKpiScoreOnTarget } from "@/lib/kpi-status";
 
@@ -111,7 +114,95 @@ export default async function MemberProfilePage({ params }: PageProps<"/members/
 
   const statusKey = currentCycleReview ? currentCycleReview.status : member.status === "invited" ? "invited" : "pending";
 
+  // ---- coaching notes ----
+  // Readable by the person, their manager/HOD and admins; written by the
+  // same people who can review them. Never exported (see the report route).
+  const canReadNotes = canEdit || member.id === actor.id;
+  const noteRows = canReadNotes
+    ? await prisma.coachingNote.findMany({
+        where: { memberId: member.id },
+        orderBy: { createdAt: "desc" },
+        include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+      })
+    : [];
+  const notes = noteRows.map((n) => ({
+    id: n.id,
+    body: n.body,
+    createdAt: n.createdAt.toISOString(),
+    authorId: n.author.id,
+    authorName: n.author.name,
+    authorAvatarUrl: n.author.avatarUrl,
+  }));
+
+  // ---- side panel: this month's review of them ----
+  // Only their OWN reviewer's form is offered here; opening someone else's
+  // would present a form the server would refuse to save.
+  const panelReview =
+    currentCycleReview && currentCycleReview.reviewerId === actor.id ? currentCycleReview : null;
+
+  const panelKpiTeams = panelReview && member.teamId && activeCycle
+    ? await prisma.kpiTeam.findMany({
+        where: { teamId: member.teamId, kpi: { quarterId: activeCycle.quarterId ?? "" } },
+        include: { kpi: true },
+      })
+    : [];
+
+  const panelScores = panelReview
+    ? await prisma.reviewKpiScore.findMany({ where: { reviewId: panelReview.id } })
+    : [];
+  const panelScoreByKpi = new Map(panelScores.map((sc) => [sc.kpiId, sc]));
+
+  const panelKpis = panelKpiTeams.map((kt) => ({
+    kpiId: kt.kpiId,
+    name: kt.kpi.name,
+    description: kt.kpi.description,
+    targetValue: kt.kpi.targetValue,
+    unit: kt.kpi.unit,
+    weightPct: kt.weightPct,
+    metricType: kt.kpi.metricType,
+    rubric: kt.kpi.rubric,
+    initialRating: panelScoreByKpi.get(kt.kpiId)?.rating ?? null,
+    initialComment: panelScoreByKpi.get(kt.kpiId)?.comment ?? null,
+  }));
+
   return (
+    <ProfileSplitLayout
+      canOpen={Boolean(panelReview)}
+      openLabel={`Review ${member.name.split(" ")[0]}`}
+      panelTitle={`${activeCycle?.label ?? "Review"} · ${member.name.split(" ")[0]}`}
+      panel={
+        panelReview ? (
+          <>
+            <ReviewForm
+              reviewId={panelReview.id}
+              kpis={panelKpis}
+              readOnly={false}
+              // Stays on the profile after saving: you opened the review from
+              // here to read their history alongside it, so being thrown to a
+              // team list would undo the reason for the split view.
+            />
+            {notes.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 500, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+                  Coaching notes
+                </span>
+                <CoachingNotes
+                  memberId={member.id}
+                  memberName={member.name}
+                  notes={notes}
+                  canWrite={false}
+                  actorId={actor.id}
+                  actorName={actor.name}
+                  actorAvatarUrl={actor.avatarUrl}
+                  isAdmin={actor.authRole === "admin"}
+                  compact
+                />
+              </div>
+            ) : null}
+          </>
+        ) : null
+      }
+    >
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       <Link
         href="/members"
@@ -344,7 +435,45 @@ export default async function MemberProfilePage({ params }: PageProps<"/members/
           </div>
         )}
       </div>
+
+      <div
+        style={{
+          background: "rgba(255,255,255,.20)",
+          border: "1px solid rgba(255,255,255,.40)",
+          WebkitBackdropFilter: "blur(35px)",
+          backdropFilter: "blur(35px)",
+          boxShadow: "0 8px 24px rgba(0,0,0,.06)",
+          borderRadius: 22,
+          padding: 22,
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: "#181835" }}>Coaching notes</div>
+          <div className="piq-caption" style={{ marginTop: 3, lineHeight: 1.55 }}>
+            Context between {member.name.split(" ")[0]}, their manager and admins. Notes are not part of a
+            review and are never included in a report shared with HR.
+          </div>
+        </div>
+        {canReadNotes ? (
+          <CoachingNotes
+            memberId={member.id}
+            memberName={member.name}
+            notes={notes}
+            canWrite={canEdit && member.id !== actor.id}
+            actorId={actor.id}
+                  actorName={actor.name}
+                  actorAvatarUrl={actor.avatarUrl}
+            isAdmin={actor.authRole === "admin"}
+          />
+        ) : (
+          <div className="piq-caption">You do not have access to this person&rsquo;s notes.</div>
+        )}
+      </div>
     </div>
+    </ProfileSplitLayout>
   );
 }
 

@@ -36,7 +36,9 @@ export function CreateTeamModal({ departments }: { departments: { id: string; na
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(24,24,53,.35)",
+        background: "rgba(24,24,53,.55)",
+        WebkitBackdropFilter: "blur(3px)",
+        backdropFilter: "blur(3px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -49,7 +51,7 @@ export function CreateTeamModal({ departments }: { departments: { id: string; na
       }}
     >
       <FrostCard
-        tone="solid"
+        tone="modal"
         style={{ width: 380, display: "flex", flexDirection: "column", gap: 14 }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -70,7 +72,7 @@ export function CreateTeamModal({ departments }: { departments: { id: string; na
           </label>
           <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             Department
-            <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} style={inputStyle}>
+            <select className="piq-select" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} style={inputStyle}>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}

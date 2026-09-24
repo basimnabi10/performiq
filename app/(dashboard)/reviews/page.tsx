@@ -1,15 +1,17 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { findActiveCycle } from "@/lib/cycles";
 import type { Prisma, ReviewStatus } from "@/lib/generated/prisma/client";
 import { FrostCard } from "@/components/ui/FrostCard";
+import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
+import { ReviewsGrid } from "@/components/reviews/ReviewsGrid";
 import { ReviewsTable } from "@/components/reviews/ReviewsTable";
 import { ReviewsFilterBar } from "@/components/reviews/ReviewsFilterBar";
 import { ReviewsCycleTabs } from "@/components/reviews/ReviewsCycleTabs";
 import { AssignReviewerModal } from "@/components/reviews/AssignReviewerModal";
-import { StartReviewModal } from "@/components/reviews/StartReviewModal";
 
 export default async function ReviewsPage({ searchParams }: PageProps<"/reviews">) {
   const actor = await getCurrentMember();
@@ -18,6 +20,8 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/reviews"
   }
 
   const { status: rawStatus, team: rawTeam, q: rawQ, minScore: rawMinScore, view: rawView, sort: rawSort } = await searchParams;
+  const rawLayout = (await searchParams).layout;
+  const layout = (Array.isArray(rawLayout) ? rawLayout[0] : rawLayout) === "grid" ? "grid" : "list";
   const statusParam = Array.isArray(rawStatus) ? rawStatus[0] : rawStatus;
   const teamParam = Array.isArray(rawTeam) ? rawTeam[0] : rawTeam;
   const qParam = Array.isArray(rawQ) ? rawQ[0] : rawQ;
@@ -57,7 +61,7 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/reviews"
           ? { cycleId: { not: activeCycle.id } }
           : {}),
     },
-    include: { reviewee: { select: { name: true } }, reviewer: { select: { name: true } }, cycle: { select: { label: true } } },
+    include: { reviewee: { select: { name: true } }, reviewer: { select: { name: true } }, cycle: { select: { label: true, endDate: true } } },
     orderBy,
     take: 100,
   });
@@ -111,7 +115,9 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/reviews"
         {activeCycle && canManage ? (
           <div style={{ display: "flex", gap: 10 }}>
             {scopedMembers.length > 1 ? <AssignReviewerModal cycleId={activeCycle.id} members={scopedMembers} /> : null}
-            <StartReviewModal cycleId={activeCycle.id} members={scopedMembers} actorId={actor.id} />
+            <Link href="/kpi-review" style={{ textDecoration: "none" }}>
+              <Button icon="ant-design:form-outlined">Start review</Button>
+            </Link>
           </div>
         ) : null}
       </div>
@@ -127,9 +133,8 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/reviews"
 
       <ReviewsFilterBar teams={teams} basePath="/reviews" />
 
-      <FrostCard>
-        <ReviewsTable
-          rows={reviews.map((r) => ({
+      {(() => {
+        const rowData = reviews.map((r) => ({
             id: r.id,
             revieweeId: r.revieweeId,
             revieweeName: r.reviewee.name,
@@ -139,9 +144,16 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/reviews"
             status: r.status,
             overallScore: r.overallScore != null ? Number(r.overallScore) : null,
             date: r.submittedAt ?? r.createdAt,
-          }))}
-        />
-      </FrostCard>
+            cycleEnd: r.cycle.endDate,
+          }));
+        return layout === "grid" ? (
+          <ReviewsGrid rows={rowData} />
+        ) : (
+          <FrostCard>
+            <ReviewsTable rows={rowData} />
+          </FrostCard>
+        );
+      })()}
     </div>
   );
 }

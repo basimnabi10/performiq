@@ -114,7 +114,7 @@ export function CourseForm({ initial }: { initial?: CourseFormInitial }) {
         </Field>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           <Field label="Category">
-            <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} style={inputStyle}>
+            <select className="piq-select" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} style={inputStyle}>
               {["Craft", "Communication", "Leadership"].map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -123,7 +123,7 @@ export function CourseForm({ initial }: { initial?: CourseFormInitial }) {
             </select>
           </Field>
           <Field label="Level">
-            <select
+            <select className="piq-select"
               value={form.level}
               onChange={(e) => setForm((f) => ({ ...f, level: e.target.value as "core" | "advanced" }))}
               style={inputStyle}

@@ -6,6 +6,7 @@ import { FrostCard } from "@/components/ui/FrostCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
+import { ReviewThisPersonButton } from "@/components/reviews/ReviewThisPersonButton";
 
 export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[id]">) {
   const { id } = await params;
@@ -16,7 +17,15 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
     include: {
       reviewee: true,
       reviewer: { select: { name: true } },
-      cycle: { select: { label: true } },
+      cycle: {
+        select: {
+          id: true,
+          label: true,
+          quarterId: true,
+          status: true,
+          quarter: { select: { status: true, year: true, index: true } },
+        },
+      },
       kpiScores: true,
     },
   });
@@ -30,18 +39,44 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
 
   if (!isReviewer && !canViewOnly) notFound();
 
-  const readOnly = !isReviewer || review.status === "completed";
+  // These must mirror assertCanEditReview in actions/reviews.ts. When they
+  // drifted apart the page disabled a form the server would happily have
+  // accepted, which reads to the user as "you are not allowed" rather than
+  // "these two files disagree".
+  const quarterClosed = review.cycle.quarter?.status === "closed";
+  const monthClosed = review.cycle.status === "closed";
+  const isOwnSelfReview = review.type === "self" && review.reviewee.id === actor.id;
+  const someoneElsesSelfReview = review.type === "self" && !isOwnSelfReview;
+  const canEdit = someoneElsesSelfReview
+    ? false
+    : actor.authRole === "admin"
+      ? !quarterClosed
+      : isReviewer && !monthClosed;
+
+  // A self-review belongs to the person being reviewed. Someone senior
+  // opening it should be told that plainly and pointed at their own review of
+  // that person -- the old wording ("Only Usama Javed can score this review")
+  // read as though nobody but the employee may ever review them.
+  const isSelfReview = review.type === "self";
+  const canReviewThemselves =
+    !isReviewer &&
+    review.reviewee.id !== actor.id &&
+    (actor.authRole === "admin" || actor.authRole === "hod" || actor.authRole === "manager");
+
+  const readOnly = !canEdit;
   const readOnlyReason = !readOnly
     ? undefined
-    : review.status === "completed"
-      ? `This review was submitted${review.submittedAt ? ` on ${review.submittedAt.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}` : ""}, so its scores are locked. Its result already counts toward ${review.reviewee.name}'s cycle score.`
-      : `Only ${review.reviewer.name} can score this review — you have view access as ${
-          actor.authRole === "admin" ? "an admin" : actor.authRole === "hod" ? "the department head" : "the team manager"
-        }.`;
+    : quarterClosed && actor.authRole === "admin"
+      ? `Q${review.cycle.quarter?.index} ${review.cycle.quarter?.year} is finished, so its reviews are final.`
+      : isSelfReview
+        ? `This is ${review.reviewee.name}'s own self-review, so only they can fill it in.`
+        : !isReviewer
+          ? `${review.reviewer.name} is the assigned reviewer for this one.`
+          : `${review.cycle.label} is closed, so this review can no longer be changed. Ask an admin to correct it for you.`;
 
   const kpiTeams = review.reviewee.teamId
     ? await prisma.kpiTeam.findMany({
-        where: { teamId: review.reviewee.teamId, kpi: { cycleId: review.cycleId } },
+        where: { teamId: review.reviewee.teamId, kpi: { quarterId: review.cycle.quarterId ?? "" } },
         include: { kpi: true },
       })
     : [];
@@ -56,6 +91,7 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
     unit: kt.kpi.unit,
     weightPct: kt.weightPct,
     metricType: kt.kpi.metricType,
+    rubric: kt.kpi.rubric,
     initialRating: scoreByKpi.get(kt.kpiId)?.rating ?? null,
     initialComment: scoreByKpi.get(kt.kpiId)?.comment ?? null,
   }));
@@ -86,8 +122,32 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
           before scoring this review.
         </div>
       ) : (
-        <ReviewForm reviewId={review.id} kpis={kpis} readOnly={readOnly} readOnlyReason={readOnlyReason} />
+        <ReviewForm
+          reviewId={review.id}
+          kpis={kpis}
+          readOnly={readOnly}
+          readOnlyReason={readOnlyReason}
+          returnTo={review.reviewee.teamId ? `/kpi-review/${review.reviewee.teamId}` : undefined}
+        />
       )}
+
+      {readOnly && canReviewThemselves && !quarterClosed ? (
+        <FrostCard tone="solid" padding={20} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 14.5, fontWeight: 500, color: "var(--text-strong)" }}>
+              Want to review {review.reviewee.name} yourself?
+            </div>
+            <div className="piq-caption" style={{ marginTop: 3, lineHeight: 1.55 }}>
+              This opens your own {review.cycle.label} review of them, separate from the one above.
+            </div>
+          </div>
+          <ReviewThisPersonButton
+            memberId={review.reviewee.id}
+            memberName={review.reviewee.name}
+            cycleId={review.cycle.id}
+          />
+        </FrostCard>
+      ) : null}
     </div>
   );
 }

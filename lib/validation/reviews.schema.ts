@@ -23,3 +23,9 @@ export const startReviewSchema = z.object({
   reviewerId: z.string().min(1),
   type: z.enum(["self", "manager", "peer"]),
 });
+
+/** Opening (or creating) the review the current person owes a team member. */
+export const openMemberReviewSchema = z.object({
+  memberId: z.string().min(1),
+  cycleId: z.string().min(1),
+});

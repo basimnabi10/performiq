@@ -24,21 +24,31 @@ export interface CreateKpiTeamOption {
   gradient: string;
 }
 
+export interface KpiCategoryOption {
+  id: string;
+  name: string;
+}
+
 export function CreateKpiModal({
-  cycleId,
+  quarterId,
   teams,
+  categories,
   defaultTeamId,
   variant = "primary",
   size,
 }: {
-  cycleId: string;
+  quarterId: string;
   teams: CreateKpiTeamOption[];
+  /** The org's shared category list. */
+  categories: KpiCategoryOption[];
   /** Pre-checked team when the modal opens (e.g. the team-detail page this button lives on). */
   defaultTeamId?: string;
   variant?: "primary" | "secondary";
   size?: "sm" | "md" | "lg" | "header";
 }) {
   const [open, setOpen] = useState(false);
+  const [categoryId, setCategoryId] = useState("");
+  const [rubric, setRubric] = useState("");
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
     () => new Set(defaultTeamId ? [defaultTeamId] : teams[0] ? [teams[0].id] : []),
   );
@@ -97,7 +107,9 @@ export function CreateKpiModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(24,24,53,.35)",
+        background: "rgba(24,24,53,.55)",
+        WebkitBackdropFilter: "blur(3px)",
+        backdropFilter: "blur(3px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -162,9 +174,11 @@ export function CreateKpiModal({
           onSubmit={(e) => {
             e.preventDefault();
             execute({
-              cycleId,
+              quarterId,
               name,
               description: description || undefined,
+              categoryId: categoryId || undefined,
+              rubric: rubric || undefined,
               metricType,
               direction,
               targetValue,
@@ -177,7 +191,7 @@ export function CreateKpiModal({
         >
           {teams.length > 0 ? (
             <div style={{ marginTop: 4 }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: "#596392", letterSpacing: ".04em", textTransform: "uppercase" }}>
                 Apply to teams
               </div>
               <div style={{ display: "flex", gap: 12, marginTop: 11, flexWrap: "wrap" }}>
@@ -216,7 +230,7 @@ export function CreateKpiModal({
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 500, color: "#181835" }}>{t.name}</div>
-                        <div style={{ fontSize: 11, color: "#767FA5" }}>{t.memberCount} members</div>
+                        <div style={{ fontSize: 11, color: "#596392" }}>{t.memberCount} members</div>
                       </div>
                       <span
                         style={{
@@ -260,6 +274,30 @@ export function CreateKpiModal({
               style={{ ...inputStyle, height: 74, padding: "12px 15px", resize: "none", lineHeight: 1.5 }}
             />
           </Field>
+          <Field label="Category">
+            <select
+              className="piq-select"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              style={{ height: 46 }}
+            >
+              <option value="">No category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Rating guidance (optional)">
+            <textarea
+              value={rubric}
+              onChange={(e) => setRubric(e.target.value)}
+              placeholder="What does a 1 look like, and what does a 5 look like? Reviewers see this while scoring."
+              rows={3}
+              style={{ ...inputStyle, height: 92, padding: "12px 15px", resize: "vertical", lineHeight: 1.5 }}
+            />
+          </Field>
           <Field label="Metric type">
             <SegmentedControl
               options={METRIC_TYPES.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))}
@@ -296,7 +334,7 @@ export function CreateKpiModal({
                   style={{
                     padding: "0 13px",
                     fontSize: 14,
-                    color: "#767FA5",
+                    color: "#596392",
                     borderRight: "1px solid rgba(168,175,203,.35)",
                     alignSelf: "stretch",
                     display: "flex",

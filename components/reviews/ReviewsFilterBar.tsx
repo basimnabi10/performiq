@@ -36,7 +36,7 @@ export function ReviewsFilterBar({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -58,7 +58,7 @@ export function ReviewsFilterBar({
           />
         </form>
 
-        <select
+        <select className="piq-select"
           value={searchParams.get("team") ?? ""}
           onChange={(e) => pushWith({ team: e.target.value || null })}
           style={selectStyle}
@@ -71,7 +71,7 @@ export function ReviewsFilterBar({
           ))}
         </select>
 
-        <select
+        <select className="piq-select"
           value={searchParams.get("status") ?? ""}
           onChange={(e) => pushWith({ status: e.target.value || null })}
           style={selectStyle}
@@ -82,6 +82,18 @@ export function ReviewsFilterBar({
           <option value="pending">Pending</option>
           <option value="draft">Draft</option>
         </select>
+        <select
+          className="piq-select"
+          value={searchParams.get("sort") ?? "recent"}
+          onChange={(e) => pushWith({ sort: e.target.value === "recent" ? null : e.target.value })}
+          style={{ ...selectStyle, flex: "0 1 210px" }}
+        >
+          <option value="recent">Sort: Most recent</option>
+          <option value="score_desc">Sort: Score (high to low)</option>
+          <option value="score_asc">Sort: Score (low to high)</option>
+        </select>
+
+        <ViewToggle />
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
@@ -110,16 +122,61 @@ export function ReviewsFilterBar({
           })}
         </div>
 
-        <select
-          value={searchParams.get("sort") ?? "recent"}
-          onChange={(e) => pushWith({ sort: e.target.value === "recent" ? null : e.target.value })}
-          style={selectStyle}
-        >
-          <option value="recent">Sort: Most recent</option>
-          <option value="score_desc">Sort: Score (high to low)</option>
-          <option value="score_asc">Sort: Score (low to high)</option>
-        </select>
       </div>
+    </div>
+  );
+}
+
+/**
+ * List or grid. A table is better for scanning many reviews and comparing
+ * scores down a column; cards are better for working through people one at a
+ * time. Both are legitimate, so the choice stays with the reader and rides in
+ * the URL, which means a link shared with someone opens the way they left it.
+ */
+function ViewToggle() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const layout = searchParams.get("layout") === "grid" ? "grid" : "list";
+
+  function setLayout(next: "list" | "grid") {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "grid") params.set("layout", "grid");
+    else params.delete("layout");
+    const qs = params.toString();
+    router.push(qs ? `?${qs}` : "?");
+  }
+
+  return (
+    <div style={{ display: "inline-flex", gap: 4, padding: 4, borderRadius: 999, background: "rgba(255,255,255,.6)", border: "1px solid rgba(100,116,139,.35)" }}>
+      {(["list", "grid"] as const).map((option) => {
+        const active = layout === option;
+        return (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={active}
+            title={option === "list" ? "List view" : "Grid view"}
+            onClick={() => setLayout(option)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 36,
+              height: 36,
+              border: "none",
+              borderRadius: 999,
+              cursor: "pointer",
+              background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "transparent",
+              color: active ? "#fff" : "var(--text-secondary)",
+            }}
+          >
+            <iconify-icon
+              icon={option === "list" ? "ant-design:unordered-list-outlined" : "ant-design:appstore-outlined"}
+              width={16}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -137,14 +194,10 @@ const inputStyle: React.CSSProperties = {
   outline: "none",
 };
 
+// .piq-select sets width: 100% so it fills a form column; on this row the
+// controls sit side by side instead, so each one gets its own basis.
 const selectStyle: React.CSSProperties = {
-  height: 44,
-  padding: "0 14px",
-  fontSize: 14,
-  color: "#181835",
-  background: "rgba(255,255,255,.8)",
-  border: "1.5px solid rgba(168,175,203,.4)",
-  borderRadius: 13,
-  cursor: "pointer",
-  fontFamily: "'Switzer',sans-serif",
+  width: "auto",
+  flex: "0 1 180px",
+  minWidth: 150,
 };

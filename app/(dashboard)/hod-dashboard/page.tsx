@@ -6,10 +6,9 @@ import { cycleScopeWhere } from "@/lib/cycles";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { InviteMemberModal } from "@/components/members/InviteMemberModal";
-import { StartCycleModal } from "@/components/cycles/StartCycleModal";
+import { MonthPicker, type MonthOption } from "@/components/cycles/MonthPicker";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { CloseCycleModal } from "@/components/cycles/CloseCycleModal";
-import { CreateKpiModal } from "@/components/kpis/CreateKpiModal";
+import { CreateKpiWizard } from "@/components/kpis/CreateKpiWizard";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
 import { PerformanceBanner } from "@/components/dashboard/hod/PerformanceBanner";
 import { TeamPerformanceCard } from "@/components/dashboard/hod/TeamPerformanceCard";
@@ -51,12 +50,21 @@ function daysUntil(date: Date): number {
 
 export default async function HodDashboardPage({ searchParams }: PageProps<"/hod-dashboard">) {
   const actor = await getCurrentMember();
+
+  // Shared across the org, so every team picks from the same list.
+  const kpiCategories = await prisma.kpiCategory.findMany({
+    where: { orgId: actor.orgId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
   if (actor.authRole !== "admin" && actor.authRole !== "hod") {
     redirect("/my-dashboard");
   }
 
-  const { team: rawTeam } = await searchParams;
+  const { team: rawTeam, month: rawMonth } = await searchParams;
   const teamParam = Array.isArray(rawTeam) ? rawTeam[0] : rawTeam;
+  // "2026-09" — absent means "whichever month is currently running".
+  const monthParam = Array.isArray(rawMonth) ? rawMonth[0] : rawMonth;
 
   const allTeams = await prisma.team.findMany({
     where: actor.authRole === "admin" ? { orgId: actor.orgId } : { departmentId: actor.departmentId ?? "" },
@@ -73,10 +81,71 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
 
   const scopeWhere = cycleScopeWhere(actor);
 
-  const [activeCycle, cycleHistory] = await Promise.all([
-    prisma.reviewCycle.findFirst({ where: { ...scopeWhere, status: "in_progress" }, orderBy: { startDate: "desc" } }),
-    prisma.reviewCycle.findMany({ where: scopeWhere, orderBy: { startDate: "asc" } }),
+  const [runningCycle, cycleHistory] = await Promise.all([
+    prisma.reviewCycle.findFirst({ where: { ...scopeWhere, status: "in_progress" }, orderBy: [{ year: "desc" }, { month: "desc" }] }),
+    prisma.reviewCycle.findMany({ where: scopeWhere, orderBy: [{ year: "asc" }, { month: "asc" }] }),
   ]);
+
+  // Every figure on this page is read against one cycle, so resolving the
+  // selection once here is what keeps the stat cards, tables and charts
+  // describing the same month.
+  const monthKeyOf = (c: { year: number; month: number }) => `${c.year}-${String(c.month).padStart(2, "0")}`;
+
+  // A month is one row in the picker even when several cycles share it: each
+  // department (and each team running its own reviews) has its own cycle for
+  // the same period, so an admin looking across four departments would
+  // otherwise see "September 2026" four times over.
+  const monthOptions: MonthOption[] = [];
+  for (const c of [...cycleHistory].reverse()) {
+    const key = monthKeyOf(c);
+    const existing = monthOptions.find((m) => m.key === key);
+    if (!existing) {
+      monthOptions.push({
+        key,
+        label: c.label,
+        status: c.status,
+        daysLeft: c.status === "in_progress" ? daysUntil(c.endDate) : undefined,
+      });
+      continue;
+    }
+    // Mixed statuses across scopes: the month is still running if any of its
+    // cycles is.
+    if (c.status === "in_progress" && existing.status !== "in_progress") {
+      existing.status = "in_progress";
+      existing.daysLeft = daysUntil(c.endDate);
+    }
+  }
+
+  const selectedMonthKey =
+    (monthParam && monthOptions.some((m) => m.key === monthParam) ? monthParam : undefined) ??
+    (runningCycle ? monthKeyOf(runningCycle) : undefined) ??
+    monthOptions[0]?.key ??
+    "";
+
+  // Every cycle covering the selected month, across all scopes in view. The
+  // page reads from the set, not from one of them, so an admin sees the whole
+  // organization for that month rather than whichever department sorted first.
+  const monthCycles = cycleHistory.filter((c) => monthKeyOf(c) === selectedMonthKey);
+  const monthCycleIds = monthCycles.map((c) => c.id);
+  const activeCycle = monthCycles.find((c) => c.status === "in_progress") ?? monthCycles[0] ?? null;
+  const isViewingPastMonth = activeCycle != null && !monthCycles.some((c) => c.status === "in_progress");
+
+  // Current weights on this quarter's KPIs, so the create wizard shows the
+  // real framework and rebalances against it rather than guessing.
+  const existingKpiWeights = activeCycle?.quarterId
+    ? (
+        await prisma.kpiTeam.findMany({
+          where: { kpi: { quarterId: activeCycle.quarterId } },
+          include: { kpi: { select: { id: true, name: true } } },
+        })
+      ).map((kt) => ({
+        kpiTeamId: kt.id,
+        kpiId: kt.kpiId,
+        teamId: kt.teamId,
+        kpiName: kt.kpi.name,
+        weightPct: kt.weightPct,
+      }))
+    : [];
 
   if (!activeCycle) {
     // Setting up from scratch has an order to it: a cycle with no teams or
@@ -109,13 +178,10 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
         ) : (
           <>
             <EmptyState
-              icon="ant-design:play-circle-outlined"
-              title="No review cycle is active"
-              body="Start a cycle to generate self- and manager-review shells for everyone in scope. KPIs are then created against that cycle."
+              icon="ant-design:calendar-outlined"
+              title="This month's cycle hasn't opened yet"
+              body="Review months open automatically on the 1st, and generate self- and manager-review shells for everyone in scope. If a department or team was created just now, its first month appears within a day."
             />
-            <div>
-              <StartCycleModal departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined} />
-            </div>
           </>
         )}
       </div>
@@ -136,12 +202,12 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
   const [kpis, memberKpiScores, reviews, learningAssignments, courses, lessonRequests, moodCheckins, auditLogs] =
     await Promise.all([
       prisma.kpi.findMany({
-        where: { cycleId: activeCycle.id, kpiTeams: { some: { teamId: { in: scopeTeamIds } } } },
+        where: { quarterId: activeCycle.quarterId ?? "", kpiTeams: { some: { teamId: { in: scopeTeamIds } } } },
         include: { kpiTeams: { where: { teamId: { in: scopeTeamIds } } } },
       }),
-      prisma.memberKpiScore.findMany({ where: { cycleId: activeCycle.id, memberId: { in: memberIds } } }),
+      prisma.memberKpiScore.findMany({ where: { cycleId: { in: monthCycleIds }, memberId: { in: memberIds } } }),
       prisma.review.findMany({
-        where: { cycleId: activeCycle.id, revieweeId: { in: memberIds } },
+        where: { cycleId: { in: monthCycleIds }, revieweeId: { in: memberIds } },
       }),
       prisma.learningAssignment.findMany({ where: { memberId: { in: memberIds } } }),
       prisma.course.count({ where: { orgId: actor.orgId, status: "published" } }),
@@ -187,7 +253,12 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
 
   // ---- Per-cycle historical trend (real cycles only, no fabricated points) ----
   const trendPoints = [];
-  for (const cycle of cycleHistory) {
+  const historyUpToSelected = activeCycle
+    ? cycleHistory.filter(
+        (c) => c.year < activeCycle.year || (c.year === activeCycle.year && c.month <= activeCycle.month),
+      )
+    : cycleHistory;
+  for (const cycle of historyUpToSelected) {
     const scores = await prisma.memberKpiScore.findMany({
       where: { cycleId: cycle.id, memberId: { in: allScopeMemberIds } },
       select: { score: true },
@@ -275,6 +346,44 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
       leaders,
     };
   });
+
+  // "Overall" sits at the front of the KPI filter and answers the question a
+  // per-KPI view cannot: who is strongest across all of them. Each person is
+  // averaged over the KPIs they were actually scored on, so someone rated on
+  // four does not lose to someone rated on one.
+  const overallByMember = new Map<string, { total: number; count: number }>();
+  for (const score of memberKpiScores) {
+    const current = overallByMember.get(score.memberId) ?? { total: 0, count: 0 };
+    current.total += Number(score.score);
+    current.count += 1;
+    overallByMember.set(score.memberId, current);
+  }
+
+  const overallLeaders = [...overallByMember.entries()]
+    .map(([memberId, { total, count }]) => ({
+      memberId,
+      name: members.find((m) => m.id === memberId)?.name ?? "Unknown",
+      score: total / count,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+
+  const overallAverage = overallLeaders.length
+    ? [...overallByMember.values()].reduce((sum, v) => sum + v.total / v.count, 0) / overallByMember.size
+    : null;
+
+  const kpiPanelEntriesWithOverall = [
+    {
+      kpiId: "__overall__",
+      name: "Overall",
+      icon: "ant-design:trophy-outlined",
+      quantifier: "combined",
+      target: `across ${kpis.length} KPIs`,
+      teamAvg: overallAverage,
+      leaders: overallLeaders,
+    },
+    ...kpiPanelEntries,
+  ];
 
   // ---- Pending actions ----
   const pendingReviews = reviews.filter((r) => r.status === "pending" || r.status === "in_progress").length;
@@ -399,6 +508,25 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           <div style={{ fontSize: 15, color: "#596392", marginTop: 3 }}>
             {activeCycle.label} · {roleViewLabel}
           </div>
+          {isViewingPastMonth ? (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                padding: "7px 13px",
+                borderRadius: "var(--radius-pill)",
+                background: "rgba(89,99,146,.10)",
+                border: "1px solid rgba(168,175,203,.4)",
+                fontSize: 12.5,
+                color: "var(--text-body)",
+              }}
+            >
+              <iconify-icon icon="ant-design:history-outlined" width={14} style={{ color: "var(--text-secondary)" }} />
+              Viewing a closed month. Reviews submitted late still count towards it, so these figures can change.
+            </div>
+          ) : null}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <ScopePicker
@@ -414,29 +542,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
               })),
             ]}
           />
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              height: 50,
-              fontSize: 14,
-              fontWeight: 500,
-              padding: "0 18px",
-              borderRadius: 16,
-              color: "#273FF9",
-              background: "rgba(58,99,250,.13)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#273FF9", boxShadow: "0 0 0 3px rgba(39,63,249,.18)" }} />
-            {activeCycle.label} · {daysToEnd} days left
-          </span>
-          <CloseCycleModal cycleId={activeCycle.id} cycleLabel={activeCycle.label} size="header" />
-          <StartCycleModal
-            departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
-            size="header"
-          />
+          <MonthPicker months={monthOptions} selectedKey={selectedMonthKey} />
         </div>
       </div>
 
@@ -465,20 +571,21 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
             size="header"
             canGrantAdmin={actor.authRole === "admin"}
           />
-          <StartCycleModal
-            departmentId={actor.authRole === "hod" ? actor.departmentId ?? undefined : undefined}
-            variant="secondary"
-            icon="ant-design:reload-outlined"
-            size="header"
-          />
+          <Link href="/kpi-review" style={{ textDecoration: "none" }}>
+            <Button variant="secondary" icon="ant-design:form-outlined" size="header">
+              Start review
+            </Button>
+          </Link>
           <Link href="/learning" style={{ textDecoration: "none" }}>
             <Button variant="secondary" icon="ant-design:read-outlined" size="header">
               Assign learning
             </Button>
           </Link>
           {canCreateKpi ? (
-            <CreateKpiModal
-              cycleId={activeCycle.id}
+            <CreateKpiWizard
+              categories={kpiCategories}
+              quarterId={activeCycle.quarterId ?? ""}
+              existingWeights={existingKpiWeights}
               teams={teamsToShow.map((t, i) => ({
                 id: t.id,
                 name: t.name,
@@ -491,9 +598,22 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
               size="header"
             />
           ) : null}
-          <Button variant="secondary" icon="ant-design:download-outlined" size="header" disabled>
-            Export report
-          </Button>
+          <Link
+            href={`/performance?month=${selectedMonthKey}${selectedTeam ? `&team=${selectedTeam.id}` : ""}`}
+            style={{ textDecoration: "none" }}
+          >
+            <Button variant="secondary" icon="ant-design:trophy-outlined" size="header">
+              All performance by KPI
+            </Button>
+          </Link>
+          <a
+            href={`/api/export/report?month=${selectedMonthKey}${selectedTeam ? `&team=${selectedTeam.id}` : ""}`}
+            style={{ textDecoration: "none" }}
+          >
+            <Button variant="secondary" icon="ant-design:download-outlined" size="header">
+              Export report
+            </Button>
+          </a>
         </div>
 
         <div style={{ gridColumn: "span 6", fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
@@ -503,7 +623,12 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
         <StatCard label="Review completion" value={`${reviewCompletionPct}%`} style={{ gridColumn: "span 1" }} />
         <StatCard label="Learning completion" value={`${learningCompletionPct}%`} style={{ gridColumn: "span 1" }} />
         <StatCard label="Total members" value={members.length} style={{ gridColumn: "span 1" }} />
-        <StatCard label="Active review cycle" value={activeCycle.label} badge="In progress" style={{ gridColumn: "span 1" }} />
+        <StatCard
+          label={isViewingPastMonth ? "Viewing month" : "Active review month"}
+          value={activeCycle.label}
+          badge={activeCycle.status === "in_progress" ? "In progress" : "Closed"}
+          style={{ gridColumn: "span 1" }}
+        />
         <StatCard label="Average KPI score" value={overallAvg != null ? overallAvg.toFixed(1) : "—"} unit="/5" style={{ gridColumn: "span 1" }} />
 
         <div style={{ gridColumn: "1/-1", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -532,11 +657,11 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
           <span style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", letterSpacing: ".04em", textTransform: "uppercase" }}>
             Performance by KPI
           </span>
-          <span style={{ fontSize: 12, color: "#767FA5" }}>
+          <span style={{ fontSize: 12, color: "#596392" }}>
             {selectedTeam ? selectedTeam.name : "All teams"} · ranked by KPI score
           </span>
         </div>
-        <KpiPerformancePanel kpis={kpiPanelEntries} />
+        <KpiPerformancePanel kpis={kpiPanelEntriesWithOverall} />
 
         {isDeptWideView ? (
           <>

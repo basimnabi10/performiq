@@ -71,6 +71,15 @@ enum KpiCadence {
   quarterly
 }
 
+/// Where a KPI is in its life, as distinct from whether it is hitting its
+/// target (that is KpiStatus). A draft is set up but not yet scored on, so
+/// someone can prepare a quarter's KPIs without them appearing half-finished
+/// on live review forms.
+enum KpiLifecycle {
+  draft
+  active
+}
+
 enum KpiStatus {
   on
   below
@@ -112,6 +121,9 @@ model Organization {
   teams        Team[]
   members      Member[]
   reviewCycles ReviewCycle[]
+  quarters     Quarter[]
+  coachingNotes CoachingNote[]
+  kpiCategories KpiCategory[]
   kpis         Kpi[]
   courses      Course[]
   auditLogs    AuditLog[]
@@ -128,6 +140,7 @@ model Department {
   teams        Team[]
   members      Member[]     @relation("DepartmentMembers")
   reviewCycles ReviewCycle[]
+  quarters     Quarter[]
 
   createdAt DateTime @default(now())
 
@@ -144,8 +157,15 @@ model Team {
   leadMemberId String?
   lead         Member?  @relation("TeamLead", fields: [leadMemberId], references: [id])
 
+  /// A team whose department has no HOD can run its own review cycles.
+  /// Explicit rather than inferred from "department has no head", so
+  /// appointing an HOD later does not silently change how a team is reviewed.
+  runsOwnCycles Boolean @default(false)
+
   members  Member[]  @relation("TeamMembers")
   kpiTeams KpiTeam[]
+  quarters Quarter[]
+  reviewCycles ReviewCycle[]
 
   createdAt DateTime @default(now())
 
@@ -209,6 +229,8 @@ model Member {
   ownedKpis           Kpi[]
   ownedCourses        Course[]
   auditLogs           AuditLog[]
+  coachingNotes       CoachingNote[] @relation("NoteSubject")
+  coachingNotesWritten CoachingNote[] @relation("NoteAuthor")
 
   @@index([orgId])
   @@index([teamId])
@@ -219,27 +241,78 @@ model Member {
 // Review cycles, reviews, KPI scoring
 // ---------------------------------------------------------------------------
 
+enum QuarterStatus {
+  planning
+  in_progress
+  closed
+}
+
+/// A calendar quarter (Q1 = Jan-Mar) for one scope: a department, a single
+/// team that runs its own reviews, or the whole org. Holds the three monthly
+/// ReviewCycles beneath it, and owns the KPI set all three months are scored
+/// against -- so targets stay fixed for a quarter instead of being re-entered
+/// every month.
+model Quarter {
+  id           String        @id @default(cuid())
+  orgId        String
+  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  year         Int
+  /// 1-4. Q1 = Jan-Mar.
+  index        Int
+  /// Scope: both null = org-wide; departmentId set = that department;
+  /// teamId set = one team that runs its own cycles.
+  departmentId String?
+  department   Department?   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  teamId       String?
+  team         Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  status       QuarterStatus @default(in_progress)
+  startDate    DateTime
+  endDate      DateTime
+
+  cycles ReviewCycle[]
+  kpis   Kpi[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, year, index, departmentId, teamId])
+  @@index([orgId])
+  @@index([departmentId])
+  @@index([teamId])
+}
+
 model ReviewCycle {
   id           String            @id @default(cuid())
   orgId        String
   org          Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// Display label, e.g. "July 2026". Derived from year/month on create.
   label        String
+  /// The quarter this month sits in.
+  quarterId    String?
+  quarter      Quarter?          @relation(fields: [quarterId], references: [id], onDelete: Cascade)
+  year         Int
+  /// 1-12.
+  month        Int
   departmentId String?
   department   Department?       @relation(fields: [departmentId], references: [id])
+  /// Set when this cycle belongs to a single team rather than a department.
+  teamId       String?
+  team         Team?             @relation(fields: [teamId], references: [id])
   status       ReviewCycleStatus @default(planning)
   startDate    DateTime
   endDate      DateTime
 
   reviews     Review[]
   assignments ReviewAssignment[]
-  kpis        Kpi[]
   memberScores MemberKpiScore[]
   snapshots   CycleSnapshot[]
 
   createdAt DateTime @default(now())
 
+  @@unique([orgId, year, month, departmentId, teamId])
   @@index([orgId])
   @@index([departmentId])
+  @@index([teamId])
+  @@index([quarterId])
 }
 
 model Review {
@@ -314,22 +387,58 @@ model ReviewerGrant {
 // KPIs
 // ---------------------------------------------------------------------------
 
+/// What kind of thing a KPI measures — Performance, Professionalism,
+/// Growth, and whatever else an HOD adds.
+///
+/// Org-wide rather than per-department on purpose: the same category has to
+/// mean the same thing everywhere, or scores stop being comparable across
+/// teams the moment two departments invent their own wording for it.
+model KpiCategory {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+
+  kpis Kpi[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
 model Kpi {
   id            String        @id @default(cuid())
   orgId         String
   org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  cycleId       String
-  cycle         ReviewCycle   @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  /// KPIs are owned by a quarter, not a month: the same targets and weights
+  /// apply to all three monthly cycles beneath it.
+  quarterId     String
+  quarter       Quarter       @relation(fields: [quarterId], references: [id], onDelete: Cascade)
   ownerId       String
   owner         Member        @relation(fields: [ownerId], references: [id])
   name          String
   description   String?
+  /// Optional so the KPIs that existed before categories did still load.
+  categoryId    String?
+  category      KpiCategory?  @relation(fields: [categoryId], references: [id])
+  /// What the 1-5 ratings mean for this KPI, written by whoever set it up and
+  /// shown to reviewers while they score. Two managers rating the same work
+  /// land on different numbers without one.
+  rubric        String?
   metricType    KpiMetricType
   direction     KpiDirection  @default(higher_is_better)
   targetValue   String // display string, e.g. "≥ 4.5"
   targetNumeric Decimal?      @db.Decimal(10, 2)
   unit          String?
   cadence       KpiCadence    @default(quarterly)
+  /// Defaults to active so every KPI that existed before this field keeps
+  /// counting; the create wizard sets draft explicitly for new ones.
+  lifecycle     KpiLifecycle  @default(active)
+  /// Listed in the organization KPI library for other teams to adopt.
+  /// Opt-in rather than default: a library that fills itself with every
+  /// team-specific KPI is noise, and the point of the library is that what
+  /// is in it was meant to be reused.
+  shareable     Boolean       @default(false)
   status        KpiStatus     @default(new)
 
   // The KPI's actual measured value this cycle, in the KPI's own real-world
@@ -350,7 +459,8 @@ model Kpi {
   updatedAt DateTime @updatedAt
 
   @@index([orgId])
-  @@index([cycleId])
+  @@index([quarterId])
+  @@index([categoryId])
 }
 
 // KPI <-> Team join. Weight lives here (not on Kpi) because the same KPI can
@@ -531,6 +641,33 @@ model CycleSnapshot {
   createdAt DateTime @default(now())
 
   @@index([cycleId])
+}
+
+/// A written note about one person, kept alongside their reviews but never
+/// part of them.
+///
+/// The distinction matters and is enforced, not just documented: a review is
+/// the scored record that gets shared with HR, while a coaching note is the
+/// conversation around it -- context, encouragement, things to work on. Notes
+/// are readable by the person they are about, by their manager/HOD, and by
+/// admins; they are deliberately absent from every export.
+model CoachingNote {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// Who the note is about.
+  memberId  String
+  member    Member   @relation("NoteSubject", fields: [memberId], references: [id], onDelete: Cascade)
+  /// Who wrote it. Kept even if they later change role, so the note keeps its
+  /// authorship.
+  authorId  String
+  author    Member   @relation("NoteAuthor", fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId, createdAt])
+  @@index([orgId])
 }
 
 model AuditLog {

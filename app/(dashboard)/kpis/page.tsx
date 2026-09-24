@@ -2,9 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
-import { findActiveCycle } from "@/lib/cycles";
+import { findActiveCycle, findActiveQuarter } from "@/lib/cycles";
+import { quarterLabel } from "@/lib/quarters";
 import { ScopePicker } from "@/components/dashboard/hod/ScopePicker";
-import { TeamKpiCreateModal } from "@/components/kpis/TeamKpiCreateModal";
+import { ImportKpisButton } from "@/components/kpis/ImportKpisButton";
+import { KpiDrawerHost } from "@/components/kpis/KpiDrawerHost";
+import { KpiLibraryDrawer } from "@/components/kpis/KpiLibraryDrawer";
+import { CreateKpiWizard } from "@/components/kpis/CreateKpiWizard";
 import { METRIC_ICON } from "@/components/kpis/TeamKpiCreateModal";
 import { KpiCurrentCell } from "@/components/kpis/KpiCurrentCell";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -31,6 +35,8 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   });
 
   const activeCycle = await findActiveCycle(actor);
+  // KPIs are owned by the quarter: one set of targets covers its three months.
+  const activeQuarter = await findActiveQuarter(actor);
 
   if (teams.length === 0) {
     return (
@@ -43,10 +49,66 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
 
   const selectedTeam = teams.find((t) => t.id === teamParam) ?? teams[0];
 
-  const kpiTeams = activeCycle
+  // Shared across the org, so every team picks from the same list.
+  const kpiCategories = await prisma.kpiCategory.findMany({
+    where: { orgId: actor.orgId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+
+  // The org library: only KPIs someone deliberately shared. Includes which
+  // teams use each one and at what weight, since that is the useful context
+  // when deciding whether to adopt it.
+  const libraryKpis = activeQuarter
+    ? (
+        await prisma.kpi.findMany({
+          where: { orgId: actor.orgId, quarterId: activeQuarter.id, shareable: true },
+          orderBy: { name: "asc" },
+          include: {
+            category: { select: { name: true } },
+            kpiTeams: { include: { team: { select: { id: true, name: true } } } },
+          },
+        })
+      ).map((k) => ({
+        kpiId: k.id,
+        name: k.name,
+        description: k.description,
+        categoryName: k.category?.name ?? null,
+        target: k.targetValue,
+        unit: k.unit,
+        usedBy: k.kpiTeams.map((kt) => ({ teamName: kt.team.name, weightPct: kt.weightPct })),
+        alreadyOnThisTeam: false,
+      }))
+    : [];
+
+  // Every weight in the open quarter, so the wizard rebalances against the
+  // real framework rather than only what this page happens to show.
+  const allQuarterWeights = activeQuarter
+    ? (
+        await prisma.kpiTeam.findMany({
+          where: { kpi: { quarterId: activeQuarter.id } },
+          include: { kpi: { select: { id: true, name: true } } },
+        })
+      ).map((kt) => ({
+        kpiTeamId: kt.id,
+        kpiId: kt.kpiId,
+        teamId: kt.teamId,
+        kpiName: kt.kpi.name,
+        weightPct: kt.weightPct,
+      }))
+    : [];
+
+  const kpiTeams = activeQuarter
     ? await prisma.kpiTeam.findMany({
-        where: { teamId: selectedTeam.id, kpi: { cycleId: activeCycle.id } },
-        include: { kpi: true },
+        where: { teamId: selectedTeam.id, kpi: { quarterId: activeQuarter.id } },
+        include: {
+          kpi: {
+            include: {
+              category: { select: { name: true } },
+              owner: { select: { name: true } },
+            },
+          },
+        },
         orderBy: { createdAt: "asc" },
       })
     : [];
@@ -59,6 +121,12 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
         where: { cycleId: activeCycle.id, memberId: { in: memberIds }, kpiId: { in: kpiTeams.map((kt) => kt.kpiId) } },
       })
     : [];
+
+  const teamMemberRecords = await prisma.member.findMany({
+    where: { id: { in: memberIds } },
+    select: { id: true, name: true },
+  });
+  const teamMemberNames = new Map(teamMemberRecords.map((m) => [m.id, m.name]));
 
   const kpiRows = kpiTeams.map((kt) => {
     const scores = memberKpiScores.filter((s) => s.kpiId === kt.kpiId);
@@ -81,6 +149,32 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       // from Kpi.status, which is only a creation-time default and never moves.
       measurementStatus: kpiMeasurementStatus(kt.kpi.currentNumeric, kt.kpi),
       hasTarget: kt.kpi.targetNumeric != null,
+      // Everything the side drawer shows, assembled here so opening it costs
+      // no extra request.
+      detail: {
+        kpiId: kt.kpiId,
+        name: kt.kpi.name,
+        description: kt.kpi.description,
+        rubric: kt.kpi.rubric,
+        categoryName: kt.kpi.category?.name ?? null,
+        lifecycle: kt.kpi.lifecycle,
+        shareable: kt.kpi.shareable,
+        metricType: kt.kpi.metricType,
+        direction: kt.kpi.direction,
+        target: kt.kpi.targetValue,
+        unit: kt.kpi.unit ?? kt.kpi.metricType,
+        currentValue: kt.kpi.currentValue,
+        weightPct: kt.weightPct,
+        avgScore,
+        ownerName: kt.kpi.owner?.name ?? null,
+        scores: scores
+          .map((sc) => ({
+            memberId: sc.memberId,
+            name: teamMemberNames.get(sc.memberId) ?? "Unknown",
+            score: Number(sc.score),
+          }))
+          .sort((a, b) => b.score - a.score),
+      },
     };
   });
 
@@ -108,7 +202,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           <div style={{ fontSize: 28, fontWeight: 500, letterSpacing: "-.02em", color: "#181835", marginTop: 2 }}>KPIs</div>
           <div style={{ fontSize: 14, color: "#596392", marginTop: 3 }}>
             {kpiTeams.length} KPIs · scored on a 1–5 scale
-            {activeCycle ? ` · used in ${activeCycle.label} review forms` : ""}
+            {activeQuarter ? ` · used in every ${quarterLabel(activeQuarter.year, activeQuarter.index)} review form` : ""}
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -143,22 +237,41 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             <iconify-icon icon="ant-design:file-done-outlined" width="15" />
             Start review
           </Link>
-          {canManage && activeCycle ? (
-            <TeamKpiCreateModal
-              cycleId={activeCycle.id}
+          {canManage && activeQuarter ? (
+            <KpiLibraryDrawer
+              kpis={libraryKpis.map((k) => ({
+                ...k,
+                alreadyOnThisTeam: kpiRows.some((r) => r.detail.kpiId === k.kpiId),
+              }))}
               teamId={selectedTeam.id}
               teamName={selectedTeam.name}
-              existingKpis={kpiRows.map((r) => ({ kpiTeamId: r.kpiTeamId, name: r.name, icon: r.icon, weightPct: r.weightPct }))}
+              remainingWeight={Math.max(0, 100 - totalWeight)}
+            />
+          ) : null}
+          {canManage && activeQuarter ? (
+            <ImportKpisButton
+              quarterId={activeQuarter.id}
+              teamId={selectedTeam.id}
+              teamName={selectedTeam.name}
+            />
+          ) : null}
+          {canManage && activeQuarter ? (
+            <CreateKpiWizard
+              quarterId={activeQuarter.id}
+              teams={teams.map((t) => ({ id: t.id, name: t.name, memberCount: t._count?.members ?? 0 }))}
+              categories={kpiCategories}
+              existingWeights={allQuarterWeights}
+              defaultTeamId={selectedTeam.id}
             />
           ) : null}
         </div>
       </div>
 
-      {!activeCycle ? (
+      {!activeQuarter ? (
         <EmptyState
           icon="ant-design:aim-outlined"
-          title="No active review cycle"
-          body="KPIs are defined per cycle, so start one from the dashboard first — then add the metrics this team is measured on."
+          title="No active quarter"
+          body="KPIs are defined per quarter, and a quarter opens with its first month. Open this month from the dashboard, then add the metrics this team is measured on."
           actionHref="/hod-dashboard"
           actionLabel="Go to dashboard"
         />
@@ -196,6 +309,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
             </div>
           ) : null}
 
+          <KpiDrawerHost details={Object.fromEntries(kpiRows.map((r) => [r.kpiTeamId, r.detail]))} canManage={canManage}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {kpiRows.length === 0 ? (
               <div
@@ -209,13 +323,15 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
                   padding: 20,
                 }}
               >
-                <div className="piq-caption">No KPIs yet for this team&rsquo;s active cycle.</div>
+                <div className="piq-caption">No KPIs yet for this team&rsquo;s current quarter.</div>
               </div>
             ) : (
               kpiRows.map((row) => (
                 <div
                   key={row.kpiTeamId}
+                  data-kpi-id={row.kpiTeamId}
                   style={{
+                    cursor: "pointer",
                     background: "rgba(255,255,255,.20)",
                     border: "1px solid rgba(255,255,255,.40)",
                     WebkitBackdropFilter: "blur(35px)",
@@ -284,6 +400,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
               ))
             )}
           </div>
+          </KpiDrawerHost>
 
           <Link
             href="/reviews"
@@ -300,7 +417,7 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
           >
             <iconify-icon icon="ant-design:file-done-outlined" width="18" style={{ color: "#273FF9", flexShrink: 0 }} />
             <div style={{ flex: 1, fontSize: 13, color: "#454D7A", lineHeight: 1.5 }}>
-              These KPIs appear as weighted 1–5 rating rows on every {selectedTeam.name} review form this cycle. Each reviewer&rsquo;s
+              These KPIs appear as weighted 1–5 rating rows on every {selectedTeam.name} review form for all three months of this quarter. Each reviewer&rsquo;s
               scores roll up by weight into the member&rsquo;s overall performance score.
             </div>
             <iconify-icon icon="ant-design:arrow-right-outlined" width="16" style={{ color: "#273FF9", flexShrink: 0 }} />

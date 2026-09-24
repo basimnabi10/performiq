@@ -66,7 +66,7 @@ export function DesignationModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(24,24,53,.42)",
+        background: "rgba(24,24,53,.55)",
         WebkitBackdropFilter: "blur(3px)",
         backdropFilter: "blur(3px)",
         display: "flex",
@@ -154,7 +154,7 @@ export function DesignationModal({
           </div>
 
           <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: "#767FA5", marginBottom: 9 }}>Suggestions</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: "#596392", marginBottom: 9 }}>Suggestions</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {SUGGESTIONS.map((label) => {
                 const active = jobTitle === label;

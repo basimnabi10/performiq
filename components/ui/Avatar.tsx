@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 
 export interface AvatarProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -9,6 +11,8 @@ export interface AvatarProps extends React.HTMLAttributes<HTMLSpanElement> {
   round?: boolean;
   /** Render the PerformIQ brand glass orb instead of an initials chip. */
   orb?: boolean;
+  /** Photo URL. Falls back to the initials chip if it is missing or fails. */
+  src?: string | null;
 }
 
 // Deterministic per-person palette so avatars stay visually distinct across
@@ -28,7 +32,12 @@ function paletteFor(name: string): string {
 }
 
 /** PerformIQ avatar — a per-person gradient chip (initials) or the brand glass orb. */
-export function Avatar({ name, size = 38, round = false, orb = false, style, ...rest }: AvatarProps) {
+export function Avatar({ name, size = 38, round = false, orb = false, src, style, ...rest }: AvatarProps) {
+  // A broken photo URL must not leave an empty grey hole where a person is:
+  // fall back to the initials chip, which is what everyone without a photo
+  // already shows.
+  const [failed, setFailed] = React.useState(false);
+  const showPhoto = Boolean(src) && !failed && !orb;
   const initials = (name ?? "")
     .split(" ")
     .map((w) => w[0])
@@ -61,7 +70,25 @@ export function Avatar({ name, size = 38, round = false, orb = false, style, ...
       }}
       {...rest}
     >
-      {!orb && initials ? initials : null}
+      {showPhoto ? (
+        /* eslint-disable-next-line @next/next/no-img-element --
+           avatars come from arbitrary hosts (Odoo, uploads), which
+           next/image would need per-domain configuration for. */
+        <img
+          src={src as string}
+          alt={name ?? "Profile photo"}
+          onError={() => setFailed(true)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            borderRadius: "inherit",
+            display: "block",
+          }}
+        />
+      ) : !orb && initials ? (
+        initials
+      ) : null}
     </span>
   );
 }

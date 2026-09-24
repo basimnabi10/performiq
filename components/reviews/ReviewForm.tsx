@@ -1,6 +1,7 @@
 "use client";
 
 import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { saveReviewDraft, submitReview } from "@/actions/reviews";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,9 @@ export interface ReviewFormKpi {
   kpiId: string;
   name: string;
   description: string | null;
+  /** What the 1-5 ratings mean for this KPI, if whoever set it up wrote it. */
+  rubric?: string | null;
+  categoryName?: string | null;
   targetValue: string;
   unit: string | null;
   weightPct: number;
@@ -38,10 +42,14 @@ export function ReviewForm({
   kpis,
   readOnly,
   readOnlyReason,
+  returnTo,
 }: {
   reviewId: string;
   kpis: ReviewFormKpi[];
   readOnly: boolean;
+  /** Where to go once the review is saved or submitted — the member list the
+   * reviewer is working through. */
+  returnTo?: string;
   /** Why the form can't be edited — without this a read-only form just looks
    * broken: the rating buttons silently do nothing and the submit button is
    * gone, with no explanation of either. */
@@ -54,8 +62,21 @@ export function ReviewForm({
     Object.fromEntries(kpis.map((k) => [k.kpiId, k.initialComment ?? ""])),
   );
 
-  const draftAction = useAction(saveReviewDraft);
-  const submitAction = useAction(submitReview);
+  const router = useRouter();
+
+  // Saving or submitting returns to wherever the review was opened from --
+  // the reviewer is working through a list of people, and leaving them
+  // parked on a finished form means navigating back by hand for every one.
+  // Without a return path (a review opened from a link or the flat list),
+  // stay put: sending someone to a team page they did not come from would
+  // be its own kind of lost.
+  const goBack = () => {
+    if (returnTo) router.push(returnTo);
+    else router.refresh();
+  };
+
+  const draftAction = useAction(saveReviewDraft, { onSuccess: goBack });
+  const submitAction = useAction(submitReview, { onSuccess: goBack });
 
   const weightedScore = useMemo(() => {
     let weightedSum = 0;
@@ -131,6 +152,32 @@ export function ReviewForm({
             </span>
           </div>
           {k.description ? <div className="piq-caption">{k.description}</div> : null}
+
+          {k.rubric ? (
+            // Shown with the ratings rather than hidden behind a tooltip: a
+            // rubric nobody reads is the same as no rubric, and the whole
+            // point is that two reviewers scoring the same work agree.
+            <div
+              style={{
+                display: "flex",
+                gap: 9,
+                marginTop: 8,
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: "rgba(89,99,146,.08)",
+                border: "1px solid rgba(168,175,203,.35)",
+              }}
+            >
+              <iconify-icon
+                icon="ant-design:info-circle-outlined"
+                width={14}
+                style={{ color: "var(--text-secondary)", flexShrink: 0, marginTop: 2 }}
+              />
+              <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "var(--text-body)", whiteSpace: "pre-wrap" }}>
+                {k.rubric}
+              </div>
+            </div>
+          ) : null}
           <div style={{ display: "flex", gap: 8 }}>
             {[1, 2, 3, 4, 5].map((n) => (
               <button

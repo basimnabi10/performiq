@@ -31,7 +31,7 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
   // otherwise every past cycle's KPIs pile up in the tab and its count.
   const kpiTeams = activeCycle
     ? await prisma.kpiTeam.findMany({
-        where: { teamId: team.id, kpi: { cycleId: activeCycle.id } },
+        where: { teamId: team.id, kpi: { quarterId: activeCycle.quarterId ?? "" } },
         include: { kpi: true },
         orderBy: { createdAt: "asc" },
       })
@@ -122,7 +122,7 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
             />
           ) : activeCycle ? (
             <TeamKpiCreateModal
-              cycleId={activeCycle.id}
+              quarterId={activeCycle.quarterId ?? ""}
               teamId={team.id}
               teamName={team.name}
               existingKpis={kpiTeams.map((kt) => ({
@@ -181,6 +181,8 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
 
       {activeTab === "members" ? (
         <MembersTable
+          cycleId={activeCycle?.id ?? null}
+          canReview={actor.authRole === "admin" || actor.authRole === "hod" || actor.authRole === "manager"}
           showTeam={false}
           rows={team.members.map((m) => ({
             id: m.id,

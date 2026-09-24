@@ -31,6 +31,20 @@ export const login = actionClient
       // user-facing message stays generic so we don't leak whether an
       // email exists or expose internal config errors to the client.
       console.error("Supabase sign-in error:", error.status, error.message);
+
+      // ...but only for a credential that was actually REJECTED. A request
+      // that never reached the auth service has nothing to leak, and calling
+      // it "incorrect email or password" sends people off resetting a
+      // password that was never wrong -- which is exactly what happened when
+      // the dev project was paused and every attempt reported bad
+      // credentials. Supabase reports these as status 0 / a fetch failure.
+      const unreachable = !error.status || error.status === 0 || /fetch failed|network|ENOTFOUND|ECONNREFUSED|timeout/i.test(error.message);
+      if (unreachable) {
+        throw new Error(
+          "Can't reach the authentication service right now, so your details couldn't be checked. This isn't a problem with your password — try again shortly.",
+        );
+      }
+
       throw new Error("Incorrect email or password.");
     }
     redirect("/dashboard");

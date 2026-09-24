@@ -24,8 +24,8 @@ export interface SidebarProps {
   name: string;
   role: string;
   sections: NavSection[];
-  switchViewHref?: string;
-  switchViewLabel?: string;
+  /** Profile photo for the account block. */
+  avatarUrl?: string | null;
 }
 
 export function Sidebar({
@@ -36,8 +36,7 @@ export function Sidebar({
   name,
   role,
   sections,
-  switchViewHref,
-  switchViewLabel,
+  avatarUrl,
 }: SidebarProps) {
   const pathname = usePathname();
 
@@ -54,7 +53,16 @@ export function Sidebar({
         borderRight: "1px solid rgba(255,255,255,.5)",
         WebkitBackdropFilter: "blur(35px)",
         backdropFilter: "blur(35px)",
-        minHeight: "100vh",
+        // Sticky rather than min-height: the sidebar sits in a flex row, so a
+        // min-height stretches it to match a long page and the profile block
+        // (marginTop: auto) lands at the bottom of the document instead of the
+        // screen -- you had to scroll the whole dashboard to reach your own
+        // account. Pinning it to one viewport keeps the profile in view, and
+        // the nav scrolls inside it when a role has more sections than fit.
+        position: "sticky",
+        top: 0,
+        height: "100vh",
+        overflow: "hidden",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "4px 8px" }}>
@@ -121,7 +129,21 @@ export function Sidebar({
         </div>
       </div>
 
-      {sections.map((section) => (
+      {/* The nav scrolls on its own. Without this, a role with many sections
+          makes the whole sidebar scroll and the account block at the bottom
+          drifts out of view. */}
+      <div
+        className="piq-sidebar-nav"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+        }}
+      >
+        {sections.map((section) => (
         <div key={section.label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <div
             style={{
@@ -165,31 +187,11 @@ export function Sidebar({
               </Link>
             );
           })}
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
 
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-        {switchViewHref ? (
-          <Link
-            href={switchViewHref}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              padding: "10px 12px",
-              borderRadius: 12,
-              background: "rgba(255,255,255,.45)",
-              border: "1px dashed rgba(168,175,203,.55)",
-              fontSize: 12,
-              color: "#596392",
-              textDecoration: "none",
-            }}
-          >
-            <iconify-icon icon="ant-design:swap-outlined" width="15" style={{ color: "#273FF9" }} />
-            {switchViewLabel}
-          </Link>
-        ) : null}
-
+      <div style={{ paddingTop: 8, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
         <div
           style={{
             display: "flex",
@@ -201,7 +203,7 @@ export function Sidebar({
             border: "1px solid rgba(255,255,255,.6)",
           }}
         >
-          <Avatar name={name} size={38} />
+          <Avatar name={name} src={avatarUrl} size={38} round />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{

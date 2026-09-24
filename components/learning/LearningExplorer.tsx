@@ -212,7 +212,7 @@ export function LearningExplorer({
                 style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", fontSize: 13, color: "#181835", outline: "none" }}
               />
             </div>
-            <select
+            <select className="piq-select"
               value={teamFilter}
               onChange={(e) => setTeamFilter(e.target.value)}
               style={{ height: 42, padding: "0 13px", fontSize: 13, color: "#181835", background: "rgba(255,255,255,.7)", border: "1.5px solid rgba(168,175,203,.4)", borderRadius: 11, cursor: "pointer" }}

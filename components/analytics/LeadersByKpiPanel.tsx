@@ -44,7 +44,7 @@ export function LeadersByKpiPanel({
           <div style={{ fontSize: 12, color: "#767FA5", marginTop: 2 }}>Who performs best on the KPI you pick</div>
         </div>
         {kpiOptions.length > 0 ? (
-          <select
+          <select className="piq-select"
             value={kpiId}
             onChange={(e) => setKpiId(e.target.value)}
             style={{

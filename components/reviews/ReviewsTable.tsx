@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
-import { Tag } from "@/components/ui/Tag";
+import { reviewStatusTone } from "@/lib/review-status";
 
 export interface ReviewRow {
   id: string;
@@ -12,21 +12,11 @@ export interface ReviewRow {
   status: "draft" | "pending" | "in_progress" | "completed";
   overallScore: number | null;
   date: Date;
+  /** End of the month this review belongs to — what makes it overdue. */
+  cycleEnd: Date | null;
 }
 
-const STATUS_TONE: Record<ReviewRow["status"], "onTrack" | "atRisk" | "neutral" | "complete"> = {
-  completed: "complete",
-  in_progress: "onTrack",
-  pending: "neutral",
-  draft: "atRisk",
-};
 
-const STATUS_LABEL: Record<ReviewRow["status"], string> = {
-  completed: "Completed",
-  in_progress: "In progress",
-  pending: "Pending",
-  draft: "Draft",
-};
 
 const GRID_COLUMNS = "1fr 100px 190px 70px 130px 40px";
 
@@ -111,9 +101,25 @@ export function ReviewsTable({ rows }: { rows: ReviewRow[] }) {
                 {r.overallScore != null ? r.overallScore.toFixed(1) : "—"}
               </div>
               <div>
-                <Tag tone={STATUS_TONE[r.status]} dot>
-                  {STATUS_LABEL[r.status]}
-                </Tag>
+                {(() => {
+                  const tone = reviewStatusTone(r.status, r.cycleEnd);
+                  return (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 11px",
+                        borderRadius: 999,
+                        background: tone.bg,
+                        color: tone.color,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {tone.label}
+                    </span>
+                  );
+                })()}
               </div>
               <span
                 style={{

@@ -40,7 +40,9 @@ export function AssignReviewerModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(24,24,53,.35)",
+        background: "rgba(24,24,53,.55)",
+        WebkitBackdropFilter: "blur(3px)",
+        backdropFilter: "blur(3px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -53,7 +55,7 @@ export function AssignReviewerModal({
       }}
     >
       <FrostCard
-        tone="solid"
+        tone="modal"
         style={{ width: 400, display: "flex", flexDirection: "column", gap: 14 }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -70,7 +72,7 @@ export function AssignReviewerModal({
         >
           <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             Reviewee
-            <select value={revieweeId} onChange={(e) => setRevieweeId(e.target.value)} style={inputStyle}>
+            <select className="piq-select" value={revieweeId} onChange={(e) => setRevieweeId(e.target.value)} style={inputStyle}>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
@@ -80,7 +82,7 @@ export function AssignReviewerModal({
           </label>
           <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             Reviewer
-            <select value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} style={inputStyle}>
+            <select className="piq-select" value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} style={inputStyle}>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}

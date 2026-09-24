@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
+import { MemberRowActions } from "@/components/members/MemberRowActions";
 import { RemoveMemberButton } from "@/components/members/RemoveMemberButton";
 
 export type ReviewStatusKind = "reviewed" | "in_progress" | "overdue" | "not_started" | "invited";
@@ -22,22 +23,28 @@ const REVIEW_STATUS_STYLE: Record<ReviewStatusKind, { label: string; color: stri
   invited: { label: "Invited", color: "#596392", bg: "rgba(89,99,146,.14)" },
 };
 
-const GRID_COLUMNS = "1fr 190px 160px 110px 40px";
-const GRID_COLUMNS_NO_TEAM = "1fr 200px 130px 120px 44px";
-// Removing gets its own trailing column so the arrow keeps its place.
-const GRID_COLUMNS_REMOVABLE = "1fr 190px 160px 110px 40px 40px";
-const GRID_COLUMNS_NO_TEAM_REMOVABLE = "1fr 200px 130px 120px 44px 40px";
+const GRID_COLUMNS = "1fr 190px 160px 110px 140px";
+const GRID_COLUMNS_NO_TEAM = "1fr 200px 130px 120px 140px";
+// Removing gets its own trailing column so the actions keep their place.
+const GRID_COLUMNS_REMOVABLE = "1fr 190px 160px 110px 140px 40px";
+const GRID_COLUMNS_NO_TEAM_REMOVABLE = "1fr 200px 130px 120px 140px 40px";
 
 export function MembersTable({
   rows,
   /** Team-detail pages already say which team you're on — the per-row team
    * pill is pure noise there, so the column collapses to a plain role. */
   showTeam = true,
+  cycleId = null,
+  canReview = false,
   /** Admin-only, and never against your own row. */
   removableMemberIds,
 }: {
   rows: MembersTableRow[];
   showTeam?: boolean;
+  /** The open month, so a row can start a review. Null when none is open. */
+  cycleId?: string | null;
+  /** Whether this viewer may review people — ICs see profiles only. */
+  canReview?: boolean;
   removableMemberIds?: string[];
 }) {
   const removable = new Set(removableMemberIds ?? []);
@@ -81,9 +88,8 @@ export function MembersTable({
           {rows.map((m) => {
             const status = REVIEW_STATUS_STYLE[m.reviewStatus];
             return (
-              <Link
+              <div
                 key={m.id}
-                href={`/members/${m.id}`}
                 style={{
                   display: "grid",
                   gridTemplateColumns: grid,
@@ -93,17 +99,19 @@ export function MembersTable({
                   borderRadius: 16,
                   background: "rgba(255,255,255,.35)",
                   border: "1px solid rgba(255,255,255,.5)",
-                  textDecoration: "none",
                   color: "inherit",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 13, minWidth: 0 }}>
+                <Link
+                  href={`/members/${m.id}`}
+                  style={{ display: "flex", alignItems: "center", gap: 13, minWidth: 0, textDecoration: "none", color: "inherit" }}
+                >
                   <Avatar name={m.name} size={38} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 500, color: "#181835" }}>{m.name}</div>
                     <div className="piq-caption">{m.email}</div>
                   </div>
-                </div>
+                </Link>
 
                 {showTeam ? (
                   <div>
@@ -145,20 +153,12 @@ export function MembersTable({
                   )}
                 </div>
 
-                <span
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    background: "rgba(58,99,250,.1)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#273FF9",
-                  }}
-                >
-                  <iconify-icon icon="ant-design:arrow-right-outlined" width={15} />
-                </span>
+                <MemberRowActions
+                  memberId={m.id}
+                  memberName={m.name}
+                  cycleId={cycleId ?? null}
+                  canReview={canReview}
+                />
 
                 {canRemoveAny ? (
                   removable.has(m.id) ? (
@@ -167,7 +167,7 @@ export function MembersTable({
                     <span />
                   )
                 ) : null}
-              </Link>
+              </div>
             );
           })}
         </div>

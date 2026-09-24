@@ -165,7 +165,11 @@
 }
 .piq-caption {
   font: var(--weight-regular) var(--text-caption) / var(--leading-snug) var(--font-sans);
-  color: var(--text-tertiary);
+  /* Was --text-tertiary (#767FA5), which lands around 3.2:1 on the frosted
+     surfaces this app uses -- under the 4.5:1 minimum, and captions carry
+     field labels and helper text, not decoration. --text-secondary keeps the
+     same muted role while clearing the threshold. */
+  color: var(--text-secondary);
 }
 .piq-num {
   font-variant-numeric: tabular-nums;
@@ -351,4 +355,280 @@ iconify-icon {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Month picker — the dashboard's period selector.
+ * ------------------------------------------------------------------------- */
+
+.piq-monthpicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.62);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-strong);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.piq-monthpicker:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.piq-monthpicker:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.piq-monthpicker-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
+  backdrop-filter: blur(30px) saturate(140%);
+  box-shadow: 0 12px 32px rgba(24, 24, 53, 0.16);
+}
+
+.piq-monthpicker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-family: var(--font-sans);
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.piq-monthpicker-item:hover {
+  background: rgba(39, 63, 249, 0.07);
+}
+
+.piq-monthpicker-item.is-selected {
+  background: rgba(39, 63, 249, 0.1);
+}
+
+.piq-monthpicker-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Sidebar nav scroll area — the bar only appears when the menu actually
+   overflows, and stays quiet against the frosted panel. */
+.piq-sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 175, 203, 0.5) transparent;
+}
+
+.piq-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.piq-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.piq-sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(168, 175, 203, 0.45);
+  border-radius: 999px;
+}
+
+.piq-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(118, 127, 165, 0.6);
+}
+
+/* ---------------------------------------------------------------------------
+ * Performance-by-KPI matrix and filter chips.
+ * ------------------------------------------------------------------------- */
+
+.piq-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 12.5px;
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.piq-chip:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.piq-chip.is-active {
+  background: linear-gradient(135deg, #3a63fa, #273ff9);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(39, 63, 249, 0.3);
+}
+
+.piq-matrix-head {
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.75);
+  border-bottom: 1px solid rgba(168, 175, 203, 0.28);
+  white-space: nowrap;
+}
+
+.piq-matrix-cell {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(168, 175, 203, 0.18);
+  vertical-align: middle;
+}
+
+/* The member column stays put while the KPI columns scroll — losing track of
+   whose row you are reading defeats the comparison the table exists for. */
+.piq-matrix-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.94);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 1px 0 0 rgba(168, 175, 203, 0.25);
+}
+
+/* ---------------------------------------------------------------------------
+ * Dropdowns — one shape for every picker and select in the product, so a
+ * control that filters a list looks the same wherever it appears.
+ * ------------------------------------------------------------------------- */
+
+.piq-dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  color: var(--text-strong);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.piq-dropdown:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.piq-dropdown[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(58, 99, 250, 0.45);
+}
+
+.piq-dropdown:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.piq-dropdown-meta {
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+}
+
+.piq-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 42;
+  min-width: 200px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 24px;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  backdrop-filter: blur(40px) saturate(150%);
+  box-shadow: 0 20px 50px rgba(24, 24, 53, 0.22);
+}
+
+.piq-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  text-align: left;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.piq-dropdown-item:hover {
+  background: rgba(39, 63, 249, 0.07);
+}
+
+.piq-dropdown-item.is-active {
+  background: rgba(39, 63, 249, 0.1);
+}
+
+.piq-dropdown-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Native <select>s get the same shape, with a drawn chevron since the OS one
+   cannot be styled. */
+.piq-select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 46px;
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  background-color: rgba(255, 255, 255, 0.6);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23596392' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.piq-select:focus-visible {
+  outline: none;
+  border-color: rgba(58, 99, 250, 0.45);
+  box-shadow: var(--focus-ring);
 }
