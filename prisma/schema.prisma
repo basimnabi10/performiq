@@ -274,6 +274,9 @@ model Quarter {
 
   createdAt DateTime @default(now())
 
+  /// Does NOT enforce one quarter per scope: every scope shape leaves one of
+  /// departmentId/teamId null, and Postgres counts nulls as distinct. The
+  /// partial indexes in 20260924180000_enforce_scoped_cycle_uniqueness do.
   @@unique([orgId, year, index, departmentId, teamId])
   @@index([orgId])
   @@index([departmentId])
@@ -308,6 +311,8 @@ model ReviewCycle {
 
   createdAt DateTime @default(now())
 
+  /// See the note on Quarter: the scope rule lives in partial indexes, not
+  /// here.
   @@unique([orgId, year, month, departmentId, teamId])
   @@index([orgId])
   @@index([departmentId])

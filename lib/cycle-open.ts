@@ -23,6 +23,15 @@ import {
  * cron run, a manual trigger and a deploy-time call can all overlap.
  */
 
+/**
+ * A scope's quarter and monthly cycle are unique per scope, enforced by the
+ * partial indexes in 20260924180000_enforce_scoped_cycle_uniqueness. Losing
+ * that insert means a concurrent run got there first, which is success.
+ */
+function isUniqueViolation(e: unknown): boolean {
+  return typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "P2002";
+}
+
 /** Finds or creates the quarter that owns a given month, for one scope. */
 export async function ensureQuarter(orgId: string, scope: CycleScopeTarget, year: number, month: number) {
   const index = quarterIndexForMonth(month);
@@ -38,18 +47,29 @@ export async function ensureQuarter(orgId: string, scope: CycleScopeTarget, year
   if (existing) return existing;
 
   const { startDate, endDate } = quarterBounds(year, index);
-  return prisma.quarter.create({
-    data: {
-      orgId,
-      year,
-      index,
-      departmentId: scope.departmentId ?? null,
-      teamId: scope.teamId ?? null,
-      status: "in_progress",
-      startDate,
-      endDate,
-    },
-  });
+  try {
+    return await prisma.quarter.create({
+      data: {
+        orgId,
+        year,
+        index,
+        departmentId: scope.departmentId ?? null,
+        teamId: scope.teamId ?? null,
+        status: "in_progress",
+        startDate,
+        endDate,
+      },
+    });
+  } catch (e) {
+    // Another run created it between the read above and this insert. That is
+    // the outcome we wanted, so read it back rather than failing the caller.
+    if (!isUniqueViolation(e)) throw e;
+    const raced = await prisma.quarter.findFirst({
+      where: { orgId, year, index, departmentId: scope.departmentId ?? null, teamId: scope.teamId ?? null },
+    });
+    if (!raced) throw e;
+    return raced;
+  }
 }
 
 export interface OpenCycleResult {
@@ -87,20 +107,31 @@ export async function openCycle(
   const quarter = await ensureQuarter(orgId, scope, year, month);
   const { startDate, endDate } = monthBounds(year, month);
 
-  const cycle = await prisma.reviewCycle.create({
-    data: {
-      orgId,
-      quarterId: quarter.id,
-      label: monthLabel(year, month),
-      year,
-      month,
-      departmentId: scope.departmentId ?? null,
-      teamId: scope.teamId ?? null,
-      status: "in_progress",
-      startDate,
-      endDate,
-    },
-  });
+  let cycle;
+  try {
+    cycle = await prisma.reviewCycle.create({
+      data: {
+        orgId,
+        quarterId: quarter.id,
+        label: monthLabel(year, month),
+        year,
+        month,
+        departmentId: scope.departmentId ?? null,
+        teamId: scope.teamId ?? null,
+        status: "in_progress",
+        startDate,
+        endDate,
+      },
+    });
+  } catch (e) {
+    if (!isUniqueViolation(e)) throw e;
+    const raced = await prisma.reviewCycle.findFirst({
+      where: { orgId, year, month, departmentId: scope.departmentId ?? null, teamId: scope.teamId ?? null },
+    });
+    if (!raced) throw e;
+    // Someone else opened this month first. Their run creates the shells.
+    return { cycleId: raced.id, created: false, reviewsCreated: 0 };
+  }
 
   const reviewsCreated = await createReviewShells(orgId, cycle.id, scope);
   return { cycleId: cycle.id, created: true, reviewsCreated };
