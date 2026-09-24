@@ -33,7 +33,7 @@ export function MoodCheckinWidget({
   if (initialValue != null) {
     const done = SCALE.find((s) => s.value === initialValue);
     return (
-      <FrostCard style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <FrostCard style={{ display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
         <div className="piq-h3">Weekly check-in</div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 32 }}>{done?.emoji}</span>
@@ -51,7 +51,7 @@ export function MoodCheckinWidget({
   }
 
   return (
-    <FrostCard style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <FrostCard style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%" }}>
       <div className="piq-h3">Weekly check-in</div>
       <div className="piq-caption">
         {weekLabel} · {daysLeft} {daysLeft === 1 ? "day" : "days"} left. Once saved it stays as your answer for the
@@ -100,7 +100,7 @@ export function MoodCheckinWidget({
       ) : null}
       <Button
         size="sm"
-        style={{ width: 160 }}
+        style={{ width: 160, marginTop: "auto" }}
         disabled={value == null || isExecuting}
         onClick={() => value != null && execute({ value, reason: reason || undefined })}
       >

@@ -173,6 +173,7 @@ export function CreateKpiWizard({
         justifyContent: "center",
         padding: 20,
         zIndex: 50,
+        textAlign: "left",
       }}
       onClick={() => setOpen(false)}
     >

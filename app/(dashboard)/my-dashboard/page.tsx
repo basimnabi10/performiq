@@ -5,7 +5,6 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Tag } from "@/components/ui/Tag";
 import { PerformanceBanner } from "@/components/dashboard/hod/PerformanceBanner";
 import { TrendPanel } from "@/components/dashboard/hod/TrendPanel";
-import { MyKpiPanel } from "@/components/dashboard/member/MyKpiPanel";
 import { MyReviewHistory } from "@/components/dashboard/member/MyReviewHistory";
 import { TeachALessonPanel } from "@/components/dashboard/member/TeachALessonPanel";
 import { MoodCheckinWidget } from "@/components/mood/MoodCheckinWidget";
@@ -25,7 +24,7 @@ function timeAgo(date: Date): string {
 export default async function MyDashboardPage() {
   const member = await getCurrentMember();
 
-  const [teammateCount, cycleHistory, todaysMood, myLessonRequests] = await Promise.all([
+  const [teammateCount, cycleHistory, todaysMood, myLessonRequests, myTeam] = await Promise.all([
     member.teamId
       ? prisma.member.count({ where: { teamId: member.teamId, id: { not: member.id } } })
       : Promise.resolve(0),
@@ -34,7 +33,12 @@ export default async function MyDashboardPage() {
       where: { memberId_date: { memberId: member.id, date: weekStart() } },
     }),
     prisma.lessonRequest.findMany({ where: { memberId: member.id }, orderBy: { createdAt: "desc" }, take: 5 }),
+    member.teamId
+      ? prisma.team.findUnique({ where: { id: member.teamId }, select: { name: true } })
+      : Promise.resolve(null),
   ]);
+
+  const teamName = myTeam?.name ?? null;
 
   const activeCycle = cycleHistory.filter((c) => c.status === "in_progress").sort((a, b) => b.startDate.getTime() - a.startDate.getTime())[0] ?? null;
 
@@ -46,7 +50,7 @@ export default async function MyDashboardPage() {
         })
       : Promise.resolve([]),
     prisma.review.findMany({
-      where: { reviewerId: member.id, status: { not: "completed" } },
+      where: { reviewerId: member.id, revieweeId: { not: member.id }, status: { not: "completed" } },
       include: { reviewee: { select: { name: true } }, cycle: { select: { label: true } } },
       orderBy: { createdAt: "asc" },
       take: 5,
@@ -90,32 +94,21 @@ export default async function MyDashboardPage() {
     : (trendPoints[trendPoints.length - 1] ?? null);
   const delta = prevPoint && currentPoint ? currentPoint.value - prevPoint.value : null;
 
-  const myKpiEntries = kpiScores.map((s) => {
-    const score = Number(s.score);
-    const onTargetKpi = isKpiScoreOnTarget(score, s.kpi);
-    // A numeric "gap to target" is only meaningful when the target is on the
-    // same 1-5 scale as the score (rating-type KPIs) — for percentage/days/
-    // currency/number KPIs the target is in a different unit, so there is no
-    // gap value to show without fabricating one.
-    const gapToTarget =
-      s.kpi.metricType === "rating" && s.kpi.targetNumeric != null && !onTargetKpi
-        ? Math.abs(Number(s.kpi.targetNumeric) - score)
-        : null;
-    return {
-      kpiId: s.kpiId,
-      name: s.kpi.name,
-      metricType: s.kpi.metricType,
-      targetValue: s.kpi.targetValue,
-      score,
-      onTarget: onTargetKpi,
-      gapToTarget,
-    };
-  });
-
   const firstName = member.name.split(" ")[0];
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(6,minmax(0,1fr))", gap: 24, alignItems: "stretch" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div>
+        <div style={{ fontSize: 14, color: "#767FA5", fontWeight: 500 }}>{teamName ?? "My workspace"}</div>
+        <div style={{ fontSize: 36, fontWeight: 500, letterSpacing: "-.02em", color: "#181835", marginTop: 2 }}>
+          {member.name}
+        </div>
+        <div style={{ fontSize: 15, color: "#596392", marginTop: 3 }}>
+          {activeCycle ? `${activeCycle.label} · My view` : "No review cycle is currently active"}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6,minmax(0,1fr))", gap: 24, alignItems: "stretch" }}>
       <PerformanceBanner
         sentence={
           currentPoint
@@ -147,8 +140,6 @@ export default async function MyDashboardPage() {
         icon="ant-design:read-outlined"
         style={{ gridColumn: "span 2" }}
       />
-
-      <MyKpiPanel kpis={myKpiEntries} />
 
       <TrendPanel
         points={trendPoints}
@@ -208,7 +199,7 @@ export default async function MyDashboardPage() {
                 }}
               >
                 <span style={{ fontSize: 13 }}>
-                  {r.type === "self" ? "Your self-review" : r.reviewee.name} · {r.cycle.label}
+                  {r.reviewee.name} · {r.cycle.label}
                 </span>
                 <Tag tone="neutral" dot>
                   {r.status}
@@ -227,6 +218,7 @@ export default async function MyDashboardPage() {
           createdAgo: timeAgo(r.createdAt),
         }))}
       />
+      </div>
     </div>
   );
 }
