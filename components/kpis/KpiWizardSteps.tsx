@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import type { WizardCategory, WizardTeam } from "@/components/kpis/KpiWizard.types";
 
 export const METRIC_TYPES = ["number", "percentage", "rating", "currency", "days"] as const;
@@ -13,41 +14,45 @@ export function StepRail({ step }: { step: 1 | 2 | 3 }) {
     { n: 3 as const, label: "Review" },
   ];
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", rowGap: 10 }}>
       {steps.map((s, i) => {
         const done = step > s.n;
         const current = step === s.n;
         return (
-          <div key={s.n} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 24,
-                height: 24,
-                borderRadius: "50%",
-                fontSize: 12,
-                fontWeight: 500,
-                background: done || current ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "rgba(168,175,203,.25)",
-                color: done || current ? "#fff" : "var(--text-secondary)",
-              }}
-            >
-              {done ? <iconify-icon icon="ant-design:check-outlined" width={12} /> : s.n}
-            </span>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: current ? 500 : 400,
-                color: current ? "var(--text-strong)" : "var(--text-secondary)",
-              }}
-            >
-              {s.label}
-            </span>
+          <Fragment key={s.n}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  flexShrink: 0,
+                  background: done || current ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "rgba(168,175,203,.25)",
+                  color: done || current ? "#fff" : "var(--text-secondary)",
+                }}
+              >
+                {done ? <iconify-icon icon="ant-design:check-outlined" width={12} /> : s.n}
+              </span>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: current ? 500 : 400,
+                  color: current ? "var(--text-strong)" : "var(--text-secondary)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {s.label}
+              </span>
+            </div>
             {i < steps.length - 1 ? (
-              <span style={{ width: 22, height: 1, background: "rgba(168,175,203,.5)" }} />
+              <span style={{ width: 28, height: 1, flexShrink: 0, background: "rgba(168,175,203,.5)" }} />
             ) : null}
-          </div>
+          </Fragment>
         );
       })}
     </div>
