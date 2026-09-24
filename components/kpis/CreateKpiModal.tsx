@@ -6,15 +6,7 @@ import { createKpi } from "@/actions/kpis";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 
-const METRIC_TYPES = ["number", "percentage", "rating", "currency", "days"] as const;
 const CADENCES = ["weekly", "monthly", "quarterly"] as const;
-const UNIT_SYMBOL: Record<(typeof METRIC_TYPES)[number], string> = {
-  number: "#",
-  percentage: "%",
-  rating: "/5",
-  currency: "$",
-  days: "d",
-};
 
 export interface CreateKpiTeamOption {
   id: string;
@@ -54,9 +46,6 @@ export function CreateKpiModal({
   );
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [metricType, setMetricType] = useState<(typeof METRIC_TYPES)[number]>("rating");
-  const [direction, setDirection] = useState<"higher_is_better" | "lower_is_better">("higher_is_better");
-  const [targetValue, setTargetValue] = useState("");
   const [cadence, setCadence] = useState<(typeof CADENCES)[number]>("quarterly");
   const [weightPct, setWeightPct] = useState(20);
 
@@ -65,7 +54,6 @@ export function CreateKpiModal({
       setOpen(false);
       setName("");
       setDescription("");
-      setTargetValue("");
     },
   });
 
@@ -80,18 +68,8 @@ export function CreateKpiModal({
 
   const selectedTeamNames = teams.filter((t) => selectedTeamIds.has(t.id)).map((t) => t.name);
   const teamLabel = selectedTeamNames.length ? selectedTeamNames.join(" and ") : "no team selected";
-  const unit = UNIT_SYMBOL[metricType];
-  const targetLabel = targetValue.trim()
-    ? metricType === "currency"
-      ? `$${targetValue}`
-      : metricType === "percentage"
-        ? `${targetValue}%`
-        : metricType === "rating"
-          ? `${targetValue}/5`
-          : targetValue
-    : "a target";
   const summary = selectedTeamNames.length
-    ? `${teamLabel} will track "${name.trim() || "this KPI"}" toward ${targetLabel}, measured ${cadence} through the active cycle.`
+    ? `${teamLabel} will track "${name.trim() || "this KPI"}" against its rubric, measured ${cadence} through the active cycle.`
     : "Select at least one team to apply this KPI to.";
 
   if (!open) {
@@ -179,10 +157,6 @@ export function CreateKpiModal({
               description: description || undefined,
               categoryId: categoryId || undefined,
               rubric: rubric || undefined,
-              metricType,
-              direction,
-              targetValue,
-              unit,
               cadence,
               teamWeights: Array.from(selectedTeamIds).map((teamId) => ({ teamId, weightPct })),
             });
@@ -298,71 +272,7 @@ export function CreateKpiModal({
               style={{ ...inputStyle, height: 92, padding: "12px 15px", resize: "vertical", lineHeight: 1.5 }}
             />
           </Field>
-          <Field label="Metric type">
-            <SegmentedControl
-              options={METRIC_TYPES.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))}
-              value={metricType}
-              onChange={(v) => setMetricType(v as typeof metricType)}
-            />
-          </Field>
-          <Field label="Direction">
-            <SegmentedControl
-              options={[
-                { value: "higher_is_better", label: "Higher is better" },
-                { value: "lower_is_better", label: "Lower is better" },
-              ]}
-              value={direction}
-              onChange={(v) => setDirection(v as typeof direction)}
-            />
-          </Field>
           <div style={{ display: "flex", gap: 16 }}>
-            <div style={{ width: 200 }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Target value</label>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginTop: 8,
-                  height: 46,
-                  background: "rgba(255,255,255,.7)",
-                  border: "1.5px solid rgba(168,175,203,.4)",
-                  borderRadius: 12,
-                  overflow: "hidden",
-                }}
-              >
-                <span
-                  style={{
-                    padding: "0 13px",
-                    fontSize: 14,
-                    color: "#596392",
-                    borderRight: "1px solid rgba(168,175,203,.35)",
-                    alignSelf: "stretch",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  {unit}
-                </span>
-                <input
-                  value={targetValue}
-                  onChange={(e) => setTargetValue(e.target.value)}
-                  placeholder="0"
-                  required
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    height: "100%",
-                    border: "none",
-                    background: "transparent",
-                    padding: "0 13px",
-                    fontSize: 14,
-                    color: "#181835",
-                    fontVariantNumeric: "tabular-nums",
-                    outline: "none",
-                  }}
-                />
-              </div>
-            </div>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Weight in review (%)</label>
               <input

@@ -19,9 +19,12 @@ export function TeamMoodPanel({
   avgValue,
   distribution,
   notes,
+  weekLabel,
 }: {
   checkinCount: number;
   totalMembers: number;
+  /** The Monday-to-Sunday week these check-ins belong to, e.g. "21–27 Sept". */
+  weekLabel: string;
   avgValue: number | null;
   distribution: Record<number, number>;
   notes: MoodNote[];
@@ -43,9 +46,9 @@ export function TeamMoodPanel({
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>Team mood today</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>Team mood this week</div>
           <div style={{ fontSize: 12, color: "#767FA5", marginTop: 2 }}>
-            {checkinCount} of {totalMembers} checked in
+            {checkinCount} of {totalMembers} checked in · {weekLabel}
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -75,9 +78,9 @@ export function TeamMoodPanel({
           >
             <iconify-icon icon="ant-design:smile-outlined" width="20" />
           </span>
-          <div style={{ fontSize: 13, fontWeight: 500, color: "#454D7A", marginTop: 11 }}>No check-ins today</div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "#454D7A", marginTop: 11 }}>No check-ins this week</div>
           <div className="piq-caption" style={{ marginTop: 3 }}>
-            Mood check-ins appear here as your team logs them.
+            Check-ins appear here as your team logs them. Each person can check in once a week.
           </div>
         </div>
       ) : (

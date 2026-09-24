@@ -136,7 +136,7 @@ export function KpiPerformanceTable({ rows }: { rows: KpiPerformanceRow[] }) {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, color: "#252944", fontVariantNumeric: "tabular-nums" }}>{r.target}</div>
+                  <div style={{ fontSize: 13, color: "#252944", fontVariantNumeric: "tabular-nums" }}>{r.target || "—"}</div>
                   <div style={{ fontSize: 11, color: "#767FA5" }}>now {r.current}</div>
                 </div>
                 <div>

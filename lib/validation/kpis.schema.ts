@@ -11,10 +11,6 @@ export const createKpiSchema = z.object({
   weightEdits: z
     .array(z.object({ kpiTeamId: z.string().min(1), weightPct: z.number().int().min(0).max(100) }))
     .default([]),
-  metricType: z.enum(["number", "percentage", "rating", "currency", "days"]),
-  direction: z.enum(["higher_is_better", "lower_is_better"]).default("higher_is_better"),
-  targetValue: z.string().trim().min(1, { error: "Enter a target." }),
-  unit: z.string().trim().max(20).optional(),
   cadence: z.enum(["weekly", "monthly", "quarterly"]).default("quarterly"),
   teamWeights: z
     .array(
@@ -53,10 +49,6 @@ export const createTeamKpiSchema = z.object({
   detail: z.string().trim().max(200).optional(),
   categoryId: z.string().optional(),
   rubric: z.string().trim().max(2000).optional(),
-  metricType: z.enum(["number", "percentage", "rating", "days"]),
-  direction: z.enum(["higher_is_better", "lower_is_better"]).default("higher_is_better"),
-  targetValue: z.string().trim().min(1, { error: "Enter a target." }),
-  unit: z.string().trim().max(20).optional(),
   weightPct: z.number().int().min(1).max(100),
   weightEdits: z
     .array(z.object({ kpiTeamId: z.string().min(1), weightPct: z.number().int().min(0).max(100) }))

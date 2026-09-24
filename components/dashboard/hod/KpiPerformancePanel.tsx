@@ -104,7 +104,8 @@ export function KpiPerformancePanel({ kpis }: { kpis: KpiPanelEntry[] }) {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 500, color: "#181835" }}>{selected.name}</div>
           <div style={{ fontSize: 12, color: "#767FA5", marginTop: 1 }}>
-            {selected.quantifier} · target {selected.target}
+            {selected.quantifier}
+            {selected.target ? ` · target ${selected.target}` : ""}
           </div>
         </div>
         <div style={{ textAlign: "right" }}>

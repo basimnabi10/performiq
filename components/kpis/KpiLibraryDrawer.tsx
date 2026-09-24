@@ -169,10 +169,12 @@ export function KpiLibraryDrawer({
                         {k.categoryName}
                       </span>
                     ) : null}
-                    <span className="piq-caption" style={{ marginLeft: "auto" }}>
-                      Target {k.target}
-                      {k.unit ? ` ${k.unit}` : ""}
-                    </span>
+                    {k.target ? (
+                      <span className="piq-caption" style={{ marginLeft: "auto" }}>
+                        Target {k.target}
+                        {k.unit ? ` ${k.unit}` : ""}
+                      </span>
+                    ) : null}
                   </div>
 
                   {k.description ? (

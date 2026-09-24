@@ -141,8 +141,8 @@ export function TeamKpiTable({ rows }: { rows: TeamKpiRow[] }) {
               </div>
 
               <div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>{row.target}</div>
-                <div style={{ fontSize: 11, color: "#767FA5" }}>{row.unit}</div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>{row.target || "1–5"}</div>
+                <div style={{ fontSize: 11, color: "#767FA5" }}>{row.target ? row.unit : "rating"}</div>
               </div>
 
               <div>

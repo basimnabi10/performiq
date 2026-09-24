@@ -11,12 +11,15 @@ export function EmptyState({
   body,
   actionHref,
   actionLabel,
+  action,
 }: {
   icon: string;
   title: string;
   body: string;
   actionHref?: string;
   actionLabel?: string;
+  /** Rendered below the body, for when the next step happens on this page. */
+  action?: React.ReactNode;
 }) {
   return (
     <div
@@ -71,6 +74,7 @@ export function EmptyState({
           <iconify-icon icon="ant-design:arrow-right-outlined" width={14} />
         </Link>
       ) : null}
+      {action ? <div style={{ marginTop: 8 }}>{action}</div> : null}
     </div>
   );
 }

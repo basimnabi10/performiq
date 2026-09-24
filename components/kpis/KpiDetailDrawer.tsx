@@ -134,7 +134,7 @@ export function KpiDetailDrawer({
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 12 }}>
           <Stat label="Weight on this team" value={`${kpi.weightPct}%`} />
-          <Stat label="Target" value={`${kpi.target}${kpi.unit ? ` ${kpi.unit}` : ""}`} />
+          {kpi.target ? <Stat label="Target" value={`${kpi.target}${kpi.unit ? ` ${kpi.unit}` : ""}`} /> : null}
           <Stat label="Recorded value" value={kpi.currentValue ?? "—"} />
           <Stat label="Average rating" value={kpi.avgScore != null ? `${kpi.avgScore.toFixed(1)}/5` : "—"} />
         </div>

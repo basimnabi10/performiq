@@ -6,9 +6,7 @@ import { createTeamKpi } from "@/actions/kpis";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 
-const METRICS = ["number", "percentage", "rating", "days"] as const;
-type Metric = (typeof METRICS)[number];
-const UNIT_SYMBOL: Record<Metric, string> = { number: "#", percentage: "%", rating: "/5", days: "d" };
+type Metric = "number" | "percentage" | "rating" | "days";
 const METRIC_ICON: Record<Metric, string> = {
   number: "ant-design:number-outlined",
   percentage: "ant-design:percentage-outlined",
@@ -38,9 +36,6 @@ export function TeamKpiCreateModal({
   const [step, setStep] = useState<"form" | "done">("form");
   const [name, setName] = useState("");
   const [detail, setDetail] = useState("");
-  const [metric, setMetric] = useState<Metric>("number");
-  const [direction, setDirection] = useState<"higher_is_better" | "lower_is_better">("higher_is_better");
-  const [target, setTarget] = useState("");
   const [weight, setWeight] = useState("");
   const [touched, setTouched] = useState(false);
   const [weightEdits, setWeightEdits] = useState<Record<string, string>>({});
@@ -57,9 +52,6 @@ export function TeamKpiCreateModal({
   function resetForm() {
     setName("");
     setDetail("");
-    setMetric("number");
-    setDirection("higher_is_better");
-    setTarget("");
     setWeight("");
     setTouched(false);
     setWeightEdits({});
@@ -120,10 +112,6 @@ export function TeamKpiCreateModal({
       teamId,
       name: name.trim(),
       detail: detail.trim() || undefined,
-      metricType: metric,
-      direction,
-      targetValue: target.trim() || "—",
-      unit: UNIT_SYMBOL[metric],
       weightPct: w,
       weightEdits: existingKpis
         .filter((r) => weightEdits[r.kpiTeamId] !== undefined && wOf(r) !== r.weightPct)
@@ -131,10 +119,7 @@ export function TeamKpiCreateModal({
     });
   }
 
-  const targetLabel = target.trim()
-    ? `${direction === "lower_is_better" ? "≤ " : "≥ "}${target.trim()}${metric === "percentage" ? "%" : ""}`
-    : "its target";
-  const summary = `${name.trim() || "This KPI"} will be scored 1–5 against ${targetLabel} at ${parseInt(weight, 10) || 10}% weight in the review.`;
+  const summary = `${name.trim() || "This KPI"} will be scored 1–5 against its rubric at ${parseInt(weight, 10) || 10}% weight in the review.`;
 
   if (!open) {
     return (
@@ -266,46 +251,7 @@ export function TeamKpiCreateModal({
               />
             </div>
 
-            <div style={{ marginTop: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Quantifier</label>
-              <SegmentedControl
-                options={METRICS.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))}
-                value={metric}
-                onChange={(v) => {
-                  const m = v as Metric;
-                  setMetric(m);
-                  if (m === "days") setDirection("lower_is_better");
-                }}
-              />
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Direction</label>
-              <SegmentedControl
-                options={[
-                  { value: "higher_is_better", label: "Higher is better" },
-                  { value: "lower_is_better", label: "Lower is better" },
-                ]}
-                value={direction}
-                onChange={(v) => setDirection(v as typeof direction)}
-              />
-            </div>
-
             <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Target value</label>
-                <div style={{ display: "flex", alignItems: "center", marginTop: 8, height: 46, background: "rgba(255,255,255,.7)", border: "1.5px solid rgba(168,175,203,.4)", borderRadius: 12, overflow: "hidden" }}>
-                  <span style={{ padding: "0 13px", fontSize: 14, color: "#596392", borderRight: "1px solid rgba(168,175,203,.35)", alignSelf: "stretch", display: "flex", alignItems: "center" }}>
-                    {UNIT_SYMBOL[metric]}
-                  </span>
-                  <input
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    placeholder="0"
-                    style={{ flex: 1, minWidth: 0, height: "100%", border: "none", background: "transparent", padding: "0 13px", fontSize: 14, color: "#181835", fontVariantNumeric: "tabular-nums", outline: "none" }}
-                  />
-                </div>
-              </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 13, fontWeight: 500, color: "#252944" }}>Weight in review</label>
                 <div style={{ display: "flex", alignItems: "center", marginTop: 8, height: 46, background: "rgba(255,255,255,.7)", border: "1.5px solid rgba(168,175,203,.4)", borderRadius: 12, overflow: "hidden" }}>
@@ -470,48 +416,6 @@ export function TeamKpiCreateModal({
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function SegmentedControl({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div style={{ display: "flex", gap: 5, marginTop: 8, padding: 5, background: "rgba(255,255,255,.55)", border: "1px solid rgba(255,255,255,.7)", borderRadius: 13 }}>
-      {options.map((o) => {
-        const active = o.value === value;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onChange(o.value)}
-            style={{
-              flex: 1,
-              textAlign: "center",
-              padding: "9px 0",
-              borderRadius: 9,
-              fontSize: 13,
-              fontWeight: 500,
-              fontFamily: "'Switzer',sans-serif",
-              cursor: "pointer",
-              border: "none",
-              whiteSpace: "nowrap",
-              color: active ? "#fff" : "#596392",
-              background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "transparent",
-              boxShadow: active ? "0 5px 14px rgba(39,63,249,.32)" : "none",
-            }}
-          >
-            {o.label}
-          </button>
-        );
-      })}
     </div>
   );
 }

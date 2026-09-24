@@ -8,6 +8,8 @@ import { Tag } from "@/components/ui/Tag";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
 import { ReviewThisPersonButton } from "@/components/reviews/ReviewThisPersonButton";
 import { RevieweeResponse } from "@/components/reviews/RevieweeResponse";
+import { CreateKpiWizard } from "@/components/kpis/CreateKpiWizard";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[id]">) {
   const { id } = await params;
@@ -88,6 +90,32 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
       })
     : [];
 
+  // A reviewer who opens a review and finds no KPIs had to go to the KPIs
+  // page, build the framework, then find their way back. The wizard is
+  // offered here instead — same component, same weight budget.
+  const canManageKpis = actor.authRole === "admin" || actor.authRole === "hod";
+  const quarterId = review.cycle.quarterId;
+  const canAddKpis = canManageKpis && !!quarterId && !!review.reviewee.teamId && !quarterClosed;
+
+  const [wizardTeams, kpiCategories, quarterWeights] = canAddKpis
+    ? await Promise.all([
+        prisma.team.findMany({
+          where: actor.authRole === "admin" ? { orgId: actor.orgId } : { departmentId: actor.departmentId ?? "" },
+          orderBy: { name: "asc" },
+          include: { _count: { select: { members: true } } },
+        }),
+        prisma.kpiCategory.findMany({
+          where: { orgId: actor.orgId },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        }),
+        prisma.kpiTeam.findMany({
+          where: { kpi: { quarterId } },
+          include: { kpi: { select: { id: true, name: true } } },
+        }),
+      ])
+    : [[], [], []];
+
   const scoreByKpi = new Map(review.kpiScores.map((s) => [s.kpiId, s]));
 
   const kpis = kpiTeams.map((kt) => ({
@@ -102,6 +130,24 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
     initialRating: scoreByKpi.get(kt.kpiId)?.rating ?? null,
     initialComment: scoreByKpi.get(kt.kpiId)?.comment ?? null,
   }));
+
+  const createKpiButton = canAddKpis ? (
+    <CreateKpiWizard
+      quarterId={quarterId}
+      teams={wizardTeams.map((t) => ({ id: t.id, name: t.name, memberCount: t._count?.members ?? 0 }))}
+      categories={kpiCategories}
+      existingWeights={quarterWeights.map((kt) => ({
+        kpiTeamId: kt.id,
+        kpiId: kt.kpiId,
+        teamId: kt.teamId,
+        kpiName: kt.kpi.name,
+        weightPct: kt.weightPct,
+      }))}
+      defaultTeamId={review.reviewee.teamId ?? undefined}
+      variant={kpis.length === 0 ? "primary" : "secondary"}
+      size="sm"
+    />
+  ) : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -124,18 +170,34 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
       </FrostCard>
 
       {kpis.length === 0 ? (
-        <div className="piq-caption">
-          No KPIs are set up for this member&rsquo;s team yet — create KPIs from the team&rsquo;s page
-          before scoring this review.
-        </div>
-      ) : (
-        <ReviewForm
-          reviewId={review.id}
-          kpis={kpis}
-          readOnly={readOnly}
-          readOnlyReason={readOnlyReason}
-          returnTo={review.reviewee.teamId ? `/kpi-review/${review.reviewee.teamId}` : undefined}
+        <EmptyState
+          icon="ant-design:aim-outlined"
+          title="No KPIs to score yet"
+          body={
+            canAddKpis
+              ? `${review.reviewee.name}'s team has no KPIs for this quarter, so there is nothing to rate. Create the first one to start the review.`
+              : "This member's team has no KPIs for this quarter yet. Ask an admin or your HOD to set them up before scoring this review."
+          }
+          action={createKpiButton}
         />
+      ) : (
+        <>
+          {createKpiButton ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <span className="piq-caption">
+                Scoring {kpis.length} {kpis.length === 1 ? "KPI" : "KPIs"} · missing one?
+              </span>
+              {createKpiButton}
+            </div>
+          ) : null}
+          <ReviewForm
+            reviewId={review.id}
+            kpis={kpis}
+            readOnly={readOnly}
+            readOnlyReason={readOnlyReason}
+            returnTo={review.reviewee.teamId ? `/kpi-review/${review.reviewee.teamId}` : undefined}
+          />
+        </>
       )}
 
       {review.status === "completed" ? (

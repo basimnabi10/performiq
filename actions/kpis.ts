@@ -33,20 +33,34 @@ export const createKpi = authActionClient
       await requireScopeAccess(actor, { teamId: team.id });
     }
 
+    const editIds = parsedInput.weightEdits.map((e) => e.kpiTeamId);
+    if (editIds.length) {
+      const rows = await prisma.kpiTeam.findMany({
+        where: { id: { in: editIds }, kpi: { orgId: actor.orgId, quarterId: parsedInput.quarterId } },
+        select: { id: true },
+      });
+      if (rows.length !== editIds.length) {
+        throw new Error("A weight you adjusted belongs to a different quarter.");
+      }
+    }
+
+    // KPIs the wizard rebalanced to the same weight can move in one statement,
+    // which keeps the transaction to a handful of round-trips however many
+    // KPIs the team already has.
+    const byWeight = new Map<number, string[]>();
+    for (const edit of parsedInput.weightEdits) {
+      const ids = byWeight.get(edit.weightPct);
+      if (ids) ids.push(edit.kpiTeamId);
+      else byWeight.set(edit.weightPct, [edit.kpiTeamId]);
+    }
+
     const kpi = await prisma.$transaction(async (tx) => {
       // The wizard may have lowered other KPIs to make room. Those edits are
       // part of the same decision, so they are applied in the same
       // transaction: applying one without the other leaves a team either over
       // 100% or with weight taken away for a KPI that never arrived.
-      for (const edit of parsedInput.weightEdits) {
-        const row = await tx.kpiTeam.findUnique({
-          where: { id: edit.kpiTeamId },
-          include: { kpi: { select: { quarterId: true, orgId: true } } },
-        });
-        if (!row || row.kpi.orgId !== actor.orgId || row.kpi.quarterId !== parsedInput.quarterId) {
-          throw new Error("A weight you adjusted belongs to a different quarter.");
-        }
-        await tx.kpiTeam.update({ where: { id: edit.kpiTeamId }, data: { weightPct: edit.weightPct } });
+      for (const [weightPct, ids] of byWeight) {
+        await tx.kpiTeam.updateMany({ where: { id: { in: ids } }, data: { weightPct } });
       }
 
       for (const tw of parsedInput.teamWeights) {
@@ -66,10 +80,10 @@ export const createKpi = authActionClient
           categoryId: parsedInput.categoryId || null,
           rubric: parsedInput.rubric || null,
           description: parsedInput.description,
-          metricType: parsedInput.metricType,
-          direction: parsedInput.direction,
-          targetValue: parsedInput.targetValue,
-          unit: parsedInput.unit,
+          metricType: "rating",
+          direction: "higher_is_better",
+          targetValue: "",
+          unit: null,
           cadence: parsedInput.cadence,
           lifecycle: parsedInput.lifecycle,
           status: "new",
@@ -85,7 +99,7 @@ export const createKpi = authActionClient
       });
 
       return created;
-    });
+    }, { timeout: 20000, maxWait: 10000 });
 
     for (const team of teams) {
       revalidatePath(`/teams/${team.id}`);
@@ -135,10 +149,10 @@ export const createTeamKpi = authActionClient
           categoryId: parsedInput.categoryId || null,
           rubric: parsedInput.rubric || null,
           description: parsedInput.detail,
-          metricType: parsedInput.metricType,
-          direction: parsedInput.direction,
-          targetValue: parsedInput.targetValue,
-          unit: parsedInput.unit,
+          metricType: "rating",
+          direction: "higher_is_better",
+          targetValue: "",
+          unit: null,
           cadence: "quarterly",
           status: "new",
         },

@@ -21,7 +21,7 @@ import { UpcomingDeadlinesPanel } from "@/components/dashboard/hod/UpcomingDeadl
 import { TeamMoodPanel } from "@/components/dashboard/hod/TeamMoodPanel";
 import { LessonRequestsPanel } from "@/components/dashboard/hod/LessonRequestsPanel";
 import { RecentActivityFeed } from "@/components/dashboard/hod/RecentActivityFeed";
-import { weekStart } from "@/lib/weeks";
+import { weekLabel, weekStart } from "@/lib/weeks";
 
 const TEAM_GRADIENTS = ["8BB0FF,#3A63FA", "A8AFCB,#596392", "C8CBE1,#6262A8", "B8BED6,#767FA5"];
 const TEAM_ICONS = [
@@ -341,7 +341,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
       kpiId: kpi.id,
       name: kpi.name,
       icon: "ant-design:aim-outlined",
-      quantifier: kpi.metricType,
+      quantifier: kpi.targetValue ? kpi.metricType : "rating",
       target: kpi.targetValue,
       teamAvg,
       leaders,
@@ -673,6 +673,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
 
         <TeamMoodPanel
           checkinCount={moodCheckins.length}
+          weekLabel={weekLabel()}
           totalMembers={members.length}
           avgValue={moodAvg}
           distribution={distribution}

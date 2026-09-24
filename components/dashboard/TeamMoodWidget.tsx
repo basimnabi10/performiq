@@ -18,7 +18,7 @@ export function TeamMoodWidget({ entries }: { entries: MoodEntry[] }) {
       <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
         <span style={{ fontSize: 28 }}>{EMOJI[Math.round(avg)]}</span>
         <span style={{ fontSize: 20, fontWeight: 500 }}>{avg.toFixed(1)} / 5</span>
-        <span className="piq-caption">{entries.length} checked in today</span>
+        <span className="piq-caption">{entries.length} checked in this week</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {entries

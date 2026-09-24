@@ -1,6 +1,7 @@
 "use client";
 
 import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { createKpi, createKpiCategory } from "@/actions/kpis";
 import { Button } from "@/components/ui/Button";
@@ -11,11 +12,9 @@ import { distributeEvenly, rebalanceAround, weightTotal } from "@/lib/kpi-distri
 import type { ExistingWeight, WizardCategory, WizardTeam } from "@/components/kpis/KpiWizard.types";
 import {
   CategoryField,
-  METRIC_TYPES,
   StepRail,
   TeamPicker,
   WeightTotalBar,
-  type MetricType,
 } from "@/components/kpis/KpiWizardSteps";
 
 const NEW_KPI_ID = "__new__";
@@ -46,6 +45,7 @@ export function CreateKpiWizard({
   variant?: "primary" | "secondary";
   size?: "sm" | "md" | "lg" | "header";
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -54,10 +54,6 @@ export function CreateKpiWizard({
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [rubric, setRubric] = useState("");
-  const [metricType, setMetricType] = useState<MetricType>("rating");
-  const [direction, setDirection] = useState<"higher_is_better" | "lower_is_better">("higher_is_better");
-  const [targetValue, setTargetValue] = useState("");
-  const [unit, setUnit] = useState("");
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
     () => new Set(defaultTeamId ? [defaultTeamId] : teams[0] ? [teams[0].id] : []),
   );
@@ -83,6 +79,7 @@ export function CreateKpiWizard({
     onSuccess: () => {
       setOpen(false);
       reset();
+      router.refresh();
     },
   });
 
@@ -92,8 +89,6 @@ export function CreateKpiWizard({
     setDescription("");
     setCategoryId("");
     setRubric("");
-    setTargetValue("");
-    setUnit("");
     setMode("auto");
     setWeights({});
   }
@@ -132,7 +127,7 @@ export function CreateKpiWizard({
   }
 
   const allTotalsValid = teamIds.every((id) => weightTotal(weightsFor(id)) === 100);
-  const step1Valid = name.trim().length >= 2 && targetValue.trim().length > 0 && selectedTeamIds.size > 0;
+  const step1Valid = name.trim().length >= 2 && selectedTeamIds.size > 0;
 
   function submit(lifecycle: "draft" | "active") {
     save.execute({
@@ -141,10 +136,6 @@ export function CreateKpiWizard({
       description: description.trim() || undefined,
       categoryId: categoryId || undefined,
       rubric: rubric.trim() || undefined,
-      metricType,
-      direction,
-      targetValue: targetValue.trim(),
-      unit: unit.trim() || undefined,
       cadence: "quarterly",
       lifecycle,
       teamWeights: teamIds.map((teamId) => ({
@@ -242,37 +233,6 @@ export function CreateKpiWizard({
                 style={{ height: "auto", padding: "12px 14px", resize: "vertical", lineHeight: 1.5 }}
               />
             </Field>
-
-            <div style={{ display: "flex", gap: 12 }}>
-              <Field label="Metric type" style={{ flex: 1 }}>
-                <select className="piq-select" value={metricType} onChange={(e) => setMetricType(e.target.value as MetricType)}>
-                  {METRIC_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t[0].toUpperCase() + t.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Direction" style={{ flex: 1 }}>
-                <select
-                  className="piq-select"
-                  value={direction}
-                  onChange={(e) => setDirection(e.target.value as "higher_is_better" | "lower_is_better")}
-                >
-                  <option value="higher_is_better">Higher is better</option>
-                  <option value="lower_is_better">Lower is better</option>
-                </select>
-              </Field>
-            </div>
-
-            <div style={{ display: "flex", gap: 12 }}>
-              <Field label="Target *" style={{ flex: 1 }}>
-                <input className="piq-input" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} placeholder="≥ 4.5" />
-              </Field>
-              <Field label="Unit" style={{ flex: 1 }}>
-                <input className="piq-input" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="rating, %, days" />
-              </Field>
-            </div>
 
             <Field label="Teams this applies to *">
               <TeamPicker
@@ -428,7 +388,6 @@ export function CreateKpiWizard({
                 label="Category"
                 value={localCategories.find((c) => c.id === categoryId)?.name ?? "None"}
               />
-              <SummaryRow label="Target" value={`${targetValue}${unit ? ` ${unit}` : ""}`} />
               {rubric ? <SummaryRow label="Rating guidance" value={rubric} /> : null}
               {teamIds.map((teamId) => {
                 const team = teams.find((t) => t.id === teamId);

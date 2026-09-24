@@ -138,7 +138,9 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
       icon: METRIC_ICON[kt.kpi.metricType as keyof typeof METRIC_ICON] ?? "ant-design:aim-outlined",
       quantifier:
         kt.kpi.description ||
-        `Quantifier: ${kt.kpi.metricType}, ${kt.kpi.direction === "lower_is_better" ? "lower" : "higher"} is better`,
+        (kt.kpi.targetValue
+          ? `Quantifier: ${kt.kpi.metricType}, ${kt.kpi.direction === "lower_is_better" ? "lower" : "higher"} is better`
+          : "Scored 1–5 against its rubric"),
       target: kt.kpi.targetValue,
       unit: kt.kpi.unit ?? kt.kpi.metricType,
       weightPct: kt.weightPct,
@@ -378,8 +380,8 @@ export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>{row.target}</div>
-                    <div style={{ fontSize: 11, color: "#767FA5" }}>{row.unit}</div>
+                    <div style={{ fontSize: 16, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>{row.target || "1–5"}</div>
+                    <div style={{ fontSize: 11, color: "#767FA5" }}>{row.target ? row.unit : "rating"}</div>
                   </div>
                   <KpiCurrentCell
                     kpiId={row.kpiId}

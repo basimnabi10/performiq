@@ -202,7 +202,9 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
             icon: METRIC_ICON[kt.kpi.metricType as keyof typeof METRIC_ICON] ?? "ant-design:aim-outlined",
             quantifier:
               kt.kpi.description ||
-              `Quantifier: ${kt.kpi.metricType}, ${kt.kpi.direction === "lower_is_better" ? "lower" : "higher"} is better`,
+              (kt.kpi.targetValue
+                ? `Quantifier: ${kt.kpi.metricType}, ${kt.kpi.direction === "lower_is_better" ? "lower" : "higher"} is better`
+                : "Scored 1–5 against its rubric"),
             target: kt.kpi.targetValue,
             unit: kt.kpi.unit ?? kt.kpi.metricType,
             currentValue: kt.kpi.currentValue,
