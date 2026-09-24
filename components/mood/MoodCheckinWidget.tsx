@@ -14,15 +14,49 @@ const SCALE = [
   { value: 1, emoji: "😣", label: "Struggling" },
 ];
 
-export function MoodCheckinWidget({ initialValue }: { initialValue: number | null }) {
+export function MoodCheckinWidget({
+  initialValue,
+  weekLabel,
+  daysLeft,
+}: {
+  /** This week's check-in, if one has already been made. */
+  initialValue: number | null;
+  weekLabel: string;
+  daysLeft: number;
+}) {
   const [value, setValue] = useState<number | null>(initialValue);
   const [reason, setReason] = useState("");
   const { execute, isExecuting, result } = useAction(submitMoodCheckin);
 
+  // Already checked in: show it back rather than an input that would be
+  // refused on submit.
+  if (initialValue != null) {
+    const done = SCALE.find((s) => s.value === initialValue);
+    return (
+      <FrostCard style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="piq-h3">Weekly check-in</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 32 }}>{done?.emoji}</span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text-strong)" }}>
+              {done?.label} · {weekLabel}
+            </div>
+            <div className="piq-caption" style={{ marginTop: 2 }}>
+              Checked in for this week. The next one opens on Monday.
+            </div>
+          </div>
+        </div>
+      </FrostCard>
+    );
+  }
+
   return (
     <FrostCard style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div className="piq-h3">Today&rsquo;s mood check-in</div>
-      <div className="piq-caption">Only your HOD sees the reason you write, if you write one.</div>
+      <div className="piq-h3">Weekly check-in</div>
+      <div className="piq-caption">
+        {weekLabel} · {daysLeft} {daysLeft === 1 ? "day" : "days"} left. Once saved it stays as your answer for the
+        week, so it records how the week actually felt. Only your HOD sees the reason you write.
+      </div>
       <div style={{ display: "flex", gap: 10 }}>
         {SCALE.map((s) => (
           <button
@@ -70,7 +104,7 @@ export function MoodCheckinWidget({ initialValue }: { initialValue: number | nul
         disabled={value == null || isExecuting}
         onClick={() => value != null && execute({ value, reason: reason || undefined })}
       >
-        {isExecuting ? "Saving…" : initialValue != null ? "Update check-in" : "Save check-in"}
+        {isExecuting ? "Saving…" : "Save check-in"}
       </Button>
     </FrostCard>
   );

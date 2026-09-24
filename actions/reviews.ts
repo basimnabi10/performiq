@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import {
   assignReviewerSchema,
   openMemberReviewSchema,
+  respondToReviewSchema,
   saveReviewSchema,
   startReviewSchema,
 } from "@/lib/validation/reviews.schema";
@@ -271,4 +272,45 @@ export const openMemberReview = authActionClient
 
     revalidatePath("/reviews");
     redirect(`/reviews/${review.id}`);
+  });
+
+/**
+ * The reviewee's reply to their own completed review.
+ *
+ * Only they can write it, and only once the review is submitted — replying to
+ * a draft would mean answering something the reviewer has not finished saying.
+ * The reply does not change any score; it sits beside the review so the record
+ * is not one-sided.
+ */
+export const respondToReview = authActionClient
+  .schema(respondToReviewSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+
+    const review = await prisma.review.findUnique({ where: { id: parsedInput.reviewId } });
+    if (!review) throw new Error("Review not found.");
+
+    if (review.revieweeId !== actor.id) {
+      throw new AuthzError("Only the person a review is about can reply to it.");
+    }
+    if (review.status !== "completed") {
+      throw new Error("You can reply once your reviewer has submitted this review.");
+    }
+
+    await prisma.review.update({
+      where: { id: review.id },
+      data: { revieweeComment: parsedInput.body.trim(), revieweeRepliedAt: new Date() },
+    });
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: "replied to their review",
+      targetType: "Review",
+      targetId: review.id,
+      metadata: {},
+    });
+
+    revalidatePath(`/reviews/${review.id}`);
+    revalidatePath("/my-dashboard");
   });

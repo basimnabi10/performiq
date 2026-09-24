@@ -328,7 +328,13 @@ model Review {
   submittedAt  DateTime?
   overallScore Decimal?     @db.Decimal(3, 2)
 
-  kpiScores ReviewKpiScore[]
+  kpiScores ReviewKpiScore[]
+  /// The reviewees own reply to a completed review. Their record should not
+  /// be one-sided: a score they disagree with is worth something less if they
+  /// had no way to say so beside it.
+  revieweeComment   String?
+  revieweeRepliedAt DateTime?
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -21,6 +21,7 @@ import { UpcomingDeadlinesPanel } from "@/components/dashboard/hod/UpcomingDeadl
 import { TeamMoodPanel } from "@/components/dashboard/hod/TeamMoodPanel";
 import { LessonRequestsPanel } from "@/components/dashboard/hod/LessonRequestsPanel";
 import { RecentActivityFeed } from "@/components/dashboard/hod/RecentActivityFeed";
+import { weekStart } from "@/lib/weeks";
 
 const TEAM_GRADIENTS = ["8BB0FF,#3A63FA", "A8AFCB,#596392", "C8CBE1,#6262A8", "B8BED6,#767FA5"];
 const TEAM_ICONS = [
@@ -219,7 +220,7 @@ export default async function HodDashboardPage({ searchParams }: PageProps<"/hod
       prisma.moodCheckin.findMany({
         where: {
           memberId: { in: memberIds },
-          date: new Date(new Date().toISOString().slice(0, 10)),
+          date: weekStart(),
         },
         include: { member: { select: { name: true } } },
       }),

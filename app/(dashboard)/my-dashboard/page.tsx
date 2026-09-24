@@ -9,12 +9,8 @@ import { MyKpiPanel } from "@/components/dashboard/member/MyKpiPanel";
 import { MyReviewHistory } from "@/components/dashboard/member/MyReviewHistory";
 import { TeachALessonPanel } from "@/components/dashboard/member/TeachALessonPanel";
 import { MoodCheckinWidget } from "@/components/mood/MoodCheckinWidget";
+import { daysLeftInWeek, weekLabel, weekStart } from "@/lib/weeks";
 import { isKpiScoreOnTarget } from "@/lib/kpi-status";
-
-function todayDateOnly(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-}
 
 function timeAgo(date: Date): string {
   const diffMs = Date.now() - date.getTime();
@@ -35,7 +31,7 @@ export default async function MyDashboardPage() {
       : Promise.resolve(0),
     prisma.reviewCycle.findMany({ where: { orgId: member.orgId }, orderBy: { startDate: "asc" } }),
     prisma.moodCheckin.findUnique({
-      where: { memberId_date: { memberId: member.id, date: todayDateOnly() } },
+      where: { memberId_date: { memberId: member.id, date: weekStart() } },
     }),
     prisma.lessonRequest.findMany({ where: { memberId: member.id }, orderBy: { createdAt: "desc" }, take: 5 }),
   ]);
@@ -160,7 +156,11 @@ export default async function MyDashboardPage() {
         scopeLabel="My"
       />
       <div style={{ gridColumn: "span 2" }}>
-        <MoodCheckinWidget initialValue={todaysMood?.value ?? null} />
+        <MoodCheckinWidget
+          initialValue={todaysMood?.value ?? null}
+          weekLabel={weekLabel()}
+          daysLeft={daysLeftInWeek()}
+        />
       </div>
 
       <MyReviewHistory

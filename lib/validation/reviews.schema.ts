@@ -29,3 +29,13 @@ export const openMemberReviewSchema = z.object({
   memberId: z.string().min(1),
   cycleId: z.string().min(1),
 });
+
+/** The reviewee's reply to a completed review of them. */
+export const respondToReviewSchema = z.object({
+  reviewId: z.string().min(1),
+  body: z
+    .string()
+    .trim()
+    .min(2, { error: "Write a reply first." })
+    .max(2000, { error: "Keep a reply under 2000 characters." }),
+});

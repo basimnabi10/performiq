@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
 import { ReviewThisPersonButton } from "@/components/reviews/ReviewThisPersonButton";
+import { RevieweeResponse } from "@/components/reviews/RevieweeResponse";
 
 export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[id]">) {
   const { id } = await params;
@@ -32,12 +33,18 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
   if (!review) notFound();
 
   const isReviewer = review.reviewerId === actor.id;
+
+  // The person a review is about can read it once it is submitted. Until this
+  // existed, a manager could finish a review and the only person it described
+  // had no way to open it -- their own dashboard linked to a 404.
+  const isRevieweeOfSubmitted = review.revieweeId === actor.id && review.status === "completed";
+
   const canViewOnly =
     actor.authRole === "admin" ||
     (actor.authRole === "hod" && actor.departmentId === review.reviewee.departmentId) ||
     (actor.authRole === "manager" && actor.teamId === review.reviewee.teamId);
 
-  if (!isReviewer && !canViewOnly) notFound();
+  if (!isReviewer && !canViewOnly && !isRevieweeOfSubmitted) notFound();
 
   // These must mirror assertCanEditReview in actions/reviews.ts. When they
   // drifted apart the page disabled a form the server would happily have
@@ -130,6 +137,16 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
           returnTo={review.reviewee.teamId ? `/kpi-review/${review.reviewee.teamId}` : undefined}
         />
       )}
+
+      {review.status === "completed" ? (
+        <RevieweeResponse
+          reviewId={review.id}
+          existing={review.revieweeComment}
+          repliedAt={review.revieweeRepliedAt ? review.revieweeRepliedAt.toISOString() : null}
+          canReply={review.revieweeId === actor.id}
+          revieweeName={review.reviewee.name}
+        />
+      ) : null}
 
       {readOnly && canReviewThemselves && !quarterClosed ? (
         <FrostCard tone="solid" padding={20} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
