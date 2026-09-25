@@ -29,6 +29,7 @@ function daysUntil(date: Date): number {
  */
 export default async function PerformancePage({ searchParams }: PageProps<"/performance">) {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
   if (actor.authRole === "ic") redirect("/my-dashboard");
 
   const { month: rawMonth, team: rawTeam } = await searchParams;

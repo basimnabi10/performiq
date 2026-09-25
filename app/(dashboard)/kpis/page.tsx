@@ -15,6 +15,7 @@ const ALL_TEAMS = "all";
 
 export default async function KpisPage({ searchParams }: PageProps<"/kpis">) {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
   if (actor.authRole !== "admin" && actor.authRole !== "hod") {
     redirect("/my-dashboard");
   }

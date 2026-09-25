@@ -1,4 +1,5 @@
 import { getCurrentMember } from "@/lib/authz";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { findActiveCycle } from "@/lib/cycles";
 import { TeamCard } from "@/components/teams/TeamCard";
@@ -16,6 +17,7 @@ const TEAM_ICONS = [
 
 export default async function TeamsPage() {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
   const isOrgWide = actor.authRole === "admin";
 
   const departmentName = isOrgWide

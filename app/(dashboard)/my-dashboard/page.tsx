@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { StatCard } from "@/components/ui/StatCard";
@@ -23,6 +24,7 @@ function timeAgo(date: Date): string {
 
 export default async function MyDashboardPage() {
   const member = await getCurrentMember();
+  if (member.authRole === "hr") redirect("/hr");
 
   const [teammateCount, cycleHistory, todaysMood, myLessonRequests, myTeam] = await Promise.all([
     member.teamId

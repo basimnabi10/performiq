@@ -8,6 +8,7 @@ const ROLE_LABEL: Record<string, string> = {
   hod: "Head of Product",
   manager: "Team Manager",
   ic: "Contributor",
+  hr: "Human Resources",
 };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -35,7 +36,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const isManager = member.authRole === "admin" || member.authRole === "hod";
 
-  const sections = isManager
+  // HR reads the record and changes none of it, so its sidebar carries only
+  // the two pages it can open. Everything else redirects it back here.
+  const sections = member.authRole === "hr"
+    ? [
+        {
+          label: "Human resources",
+          items: [
+            { href: "/hr", label: "Overview", icon: "ant-design:dashboard-outlined" },
+            { href: "/hr/employees", label: "Employees", icon: "ant-design:user-outlined" },
+          ],
+        },
+      ]
+    : isManager
     ? [
         { label: "Overview", items: [{ href: "/hod-dashboard", label: "Dashboard", icon: "ant-design:dashboard-outlined" }] },
         {
@@ -92,7 +105,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const workspaceLabel = isManager
     ? department?.name ?? "Department"
     : team?.name ?? "Workspace";
-  const workspaceSub = isManager ? "Department workspace" : member.authRole === "manager" ? "Team workspace" : "Your workspace";
+  const workspaceSub =
+    member.authRole === "hr"
+      ? "Read-only workspace"
+      : isManager
+        ? "Department workspace"
+        : member.authRole === "manager"
+          ? "Team workspace"
+          : "Your workspace";
   const workspaceIcon = isManager ? "ant-design:appstore-outlined" : "ant-design:bg-colors-outlined";
 
   return (

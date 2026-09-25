@@ -5,6 +5,9 @@ import { getCurrentMember } from "@/lib/authz";
 export default async function DashboardPage() {
   const member = await getCurrentMember();
 
+  if (member.authRole === "hr") {
+    redirect("/hr");
+  }
   if (member.authRole === "admin" || member.authRole === "hod") {
     redirect("/hod-dashboard");
   }

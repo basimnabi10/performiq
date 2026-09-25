@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { getCurrentMember, requireSelfOrRole } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { departmentCycleWhere, findActiveCycleForDepartment } from "@/lib/cycles";
@@ -22,6 +22,7 @@ const STATUS_BADGE: Record<string, string> = {
 export default async function MemberProfilePage({ params }: PageProps<"/members/[id]">) {
   const { id } = await params;
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
 
   // requireSelfOrRole re-derives the target's department/team from the DB
   // and checks the requester's scope against it — an id existing is never

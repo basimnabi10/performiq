@@ -51,6 +51,7 @@ function daysUntil(date: Date): number {
 
 export default async function HodDashboardPage({ searchParams }: PageProps<"/hod-dashboard">) {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
 
   // Shared across the org, so every team picks from the same list.
   const kpiCategories = await prisma.kpiCategory.findMany({

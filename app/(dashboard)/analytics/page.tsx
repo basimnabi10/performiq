@@ -22,6 +22,7 @@ const BUCKET_DEFS = [
 
 export default async function AnalyticsPage({ searchParams }: PageProps<"/analytics">) {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
   if (actor.authRole === "ic") redirect("/my-dashboard");
 
   const { team: rawTeam } = await searchParams;

@@ -1,4 +1,5 @@
 import { getCurrentMember } from "@/lib/authz";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { findActiveCycle } from "@/lib/cycles";
 import { FrostCard } from "@/components/ui/FrostCard";
@@ -11,6 +12,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
   const { team: rawTeamFilter } = await searchParams;
   const teamFilter = Array.isArray(rawTeamFilter) ? rawTeamFilter[0] : rawTeamFilter;
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
 
   const teams = await prisma.team.findMany({
     where: { orgId: actor.orgId },

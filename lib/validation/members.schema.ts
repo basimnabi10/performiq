@@ -7,7 +7,7 @@ import { z } from "zod";
  * team members who are reviewed. Granting `admin` is additionally restricted
  * to admins in the action itself (a non-admin must not be able to mint one).
  */
-export const invitableRoles = ["admin", "ic"] as const;
+export const invitableRoles = ["admin", "hr", "ic"] as const;
 
 export const inviteMemberSchema = z.discriminatedUnion("mode", [
   z.object({

@@ -7,6 +7,7 @@ export default async function NewCoursePage({ searchParams }: PageProps<"/learni
   const { edit } = await searchParams;
   const editId = Array.isArray(edit) ? edit[0] : edit;
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
 
   try {
     await requireCanAuthorCourses(actor);

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { toLearnerSafeQuiz } from "@/lib/quiz";
@@ -7,6 +7,7 @@ import { CourseViewer } from "@/components/learning/CourseViewer";
 export default async function CoursePage({ params }: PageProps<"/learning/[courseId]">) {
   const { courseId } = await params;
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },

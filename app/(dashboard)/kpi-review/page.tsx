@@ -23,6 +23,7 @@ const TEAM_GRADIENTS = [
  */
 export default async function KpiReviewPage() {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
   if (actor.authRole === "ic") redirect("/my-dashboard");
 
   const cycle = await findActiveCycle(actor);

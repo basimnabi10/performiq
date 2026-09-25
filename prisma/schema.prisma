@@ -21,6 +21,9 @@ enum AuthRole {
   hod
   manager
   ic
+  /// Read-only across the whole organization. Never appears in a
+  /// requireRole allowlist, so every write action refuses it by default.
+  hr
 }
 
 enum MemberStatus {

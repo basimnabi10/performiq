@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { FrostCard } from "@/components/ui/FrostCard";
@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[id]">) {
   const { id } = await params;
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
 
   const review = await prisma.review.findUnique({
     where: { id },

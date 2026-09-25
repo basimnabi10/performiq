@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { getCurrentMember } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { findActiveCycleForDepartment } from "@/lib/cycles";
@@ -14,6 +14,7 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
   const { id } = await params;
   const { tab } = await searchParams;
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
 
   const team = await prisma.team.findFirst({
     where: { id, orgId: actor.orgId },

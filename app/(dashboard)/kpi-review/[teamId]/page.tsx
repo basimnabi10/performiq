@@ -17,6 +17,7 @@ import { ReviewMemberCard } from "@/components/reviews/ReviewMemberCard";
  */
 export default async function KpiReviewTeamPage({ params }: PageProps<"/kpi-review/[teamId]">) {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
   if (actor.authRole === "ic") redirect("/my-dashboard");
 
   const { teamId } = await params;

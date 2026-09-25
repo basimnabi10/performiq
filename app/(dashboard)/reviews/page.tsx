@@ -15,6 +15,7 @@ import { AssignReviewerModal } from "@/components/reviews/AssignReviewerModal";
 
 export default async function ReviewsPage({ searchParams }: PageProps<"/reviews">) {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
   if (actor.authRole === "ic") {
     redirect("/my-dashboard");
   }

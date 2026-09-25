@@ -6,6 +6,7 @@ import { DepartmentManager } from "@/components/settings/DepartmentManager";
 
 export default async function SettingsPage() {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
   if (actor.authRole !== "admin") {
     redirect("/my-dashboard");
   }

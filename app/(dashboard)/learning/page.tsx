@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AuthzError, getCurrentMember, requireCanAuthorCourses } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,7 @@ const LEVEL_LABEL: Record<string, string> = { core: "Core", advanced: "Advanced"
 
 export default async function LearningPage() {
   const actor = await getCurrentMember();
+  if (actor.authRole === "hr") redirect("/hr");
 
   let canAuthor = true;
   try {
