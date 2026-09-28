@@ -26,7 +26,10 @@ export async function proxy(request: NextRequest) {
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob:`,
+    // Avatars are uploaded to Supabase Storage and served from that project's
+    // own host, so 'self' alone would let the upload succeed and then quietly
+    // refuse to render the result.
+    `img-src 'self' data: blob: ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}`,
     `font-src 'self'`,
     `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""} https://api.iconify.design https://api.simplesvg.com https://api.unisvg.com`,
     `object-src 'none'`,
