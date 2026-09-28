@@ -20,6 +20,12 @@ const ROLE_OPTIONS = [
     icon: "ant-design:user-outlined",
   },
   {
+    value: "hod" as const,
+    label: "Head of department",
+    blurb: "Runs one department: its teams, KPIs, reviews and cycles. Takes the department of the team you pick.",
+    icon: "ant-design:crown-outlined",
+  },
+  {
     value: "hr" as const,
     label: "Human resources",
     blurb: "Reads every department's review record. Changes nothing.",
@@ -57,7 +63,7 @@ export function InviteMemberModal({
   // reachable mode -- but the state stays, because the lookup flow behind it
   // is complete and only waiting on credentials.
   const [mode, setMode] = useState<"manual" | "odoo">("manual");
-  const [authRole, setAuthRole] = useState<"ic" | "hr" | "admin">("ic");
+  const [authRole, setAuthRole] = useState<"ic" | "hod" | "hr" | "admin">("ic");
   const [email, setEmail] = useState("");
   const [lookupTerm, setLookupTerm] = useState("");
 
@@ -215,7 +221,7 @@ export function InviteMemberModal({
                 Role
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {ROLE_OPTIONS.filter((r) => (r.value !== "admin" && r.value !== "hr") || canGrantAdmin).map((r) => {
+                {ROLE_OPTIONS.filter((r) => r.value === "ic" || canGrantAdmin).map((r) => {
                   const active = authRole === r.value;
                   return (
                     <button

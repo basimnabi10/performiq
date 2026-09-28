@@ -44,7 +44,8 @@ export const inviteMember = authActionClient
 
     // Only an admin can create another admin — otherwise anyone who can
     // invite could grant themselves a colleague with full org access.
-    if ((parsedInput.authRole === "admin" || parsedInput.authRole === "hr") && actor.authRole !== "admin") {
+    const privileged = ["admin", "hod", "hr"];
+    if (privileged.includes(parsedInput.authRole) && actor.authRole !== "admin") {
       throw new AuthzError("Only an admin can invite another admin.");
     }
 
