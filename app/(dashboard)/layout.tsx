@@ -69,9 +69,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
             { href: "/learning", label: "Learning", icon: "ant-design:read-outlined" },
           ],
         },
-        ...(member.authRole === "admin"
-          ? [{ label: "Admin", items: [{ href: "/settings", label: "Settings", icon: "ant-design:setting-outlined" }] }]
-          : []),
+        {
+          label: member.authRole === "admin" ? "Admin" : "Account",
+          items: [{ href: "/settings", label: "Settings", icon: "ant-design:setting-outlined" }],
+        },
       ]
     : member.authRole === "manager"
       ? [

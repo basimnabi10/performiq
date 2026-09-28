@@ -2,6 +2,7 @@
 
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { submitMoodCheckin } from "@/actions/mood";
 import { Button } from "@/components/ui/Button";
 import { FrostCard } from "@/components/ui/FrostCard";
@@ -26,7 +27,13 @@ export function MoodCheckinWidget({
 }) {
   const [value, setValue] = useState<number | null>(initialValue);
   const [reason, setReason] = useState("");
-  const { execute, isExecuting, result } = useAction(submitMoodCheckin);
+  const router = useRouter();
+  // Without this the form stays on screen after saving, so it reads as though
+  // nothing happened — and clicking again fails, because a check-in is one
+  // per week and cannot be resubmitted.
+  const { execute, isExecuting, result } = useAction(submitMoodCheckin, {
+    onSuccess: () => router.refresh(),
+  });
 
   // Already checked in: show it back rather than an input that would be
   // refused on submit.
