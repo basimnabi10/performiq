@@ -471,12 +471,12 @@ function modeTabStyle(active: boolean): React.CSSProperties {
 
 const selectStyle: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,.75)",
-  // Matches the dropdowns above it, and the month and scope pickers at the
-  // top of every page. A form whose fields round differently row by row
-  // reads as parts from two designs.
-  borderRadius: "var(--radius-pill)",
-  minHeight: 46,
-  padding: "10px 18px",
+  // The same radius as .piq-input and as the dropdowns above it: a form
+  // whose fields round differently row by row reads as parts from two
+  // designs.
+  borderRadius: "var(--radius-md)",
+  minHeight: 44,
+  padding: "10px 14px",
   fontFamily: "'Switzer',sans-serif",
   fontSize: 14,
   background: "rgba(255,255,255,.6)",

@@ -106,6 +106,8 @@ export function Dropdown({
             zIndex: 41,
             width: "100%",
             justifyContent: "space-between",
+            borderRadius: "var(--radius-md)",
+            minHeight: 44,
             opacity: disabled ? 0.55 : 1,
             cursor: disabled ? "not-allowed" : "pointer",
             borderColor: error ? "rgba(180,35,24,.55)" : undefined,
