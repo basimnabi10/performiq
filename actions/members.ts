@@ -14,6 +14,7 @@ import {
   inviteMemberSchema,
   lookupOdooEmployeeSchema,
   removeMemberSchema,
+  updateMemberRoleSchema,
   updateDesignationSchema,
 } from "@/lib/validation/members.schema";
 
@@ -286,4 +287,69 @@ export const removeMember = authActionClient
     if (target.teamId) revalidatePath(`/teams/${target.teamId}`);
 
     return { name: target.name, email: target.email };
+  });
+
+/**
+ * Changes what someone can do after they were invited.
+ *
+ * Admin-only, because every role above `ic` carries sight of other people's
+ * reviews. Two things it refuses outright:
+ *
+ *  - Changing your own role. An admin who demotes themselves cannot undo it,
+ *    and if they were the last admin nobody else can either.
+ *  - Demoting the last admin. `removeMember` already refuses to delete one
+ *    for the same reason; leaving by the other door would be the same
+ *    lockout with a different name.
+ *
+ * A HOD is read against their department, so moving someone into that role
+ * without one would hand them a working login and an empty application. That
+ * is caught here rather than discovered later.
+ */
+export const updateMemberRole = authActionClient
+  .schema(updateMemberRoleSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin"]);
+
+    const target = await prisma.member.findUnique({
+      where: { id: parsedInput.memberId },
+      select: { id: true, orgId: true, name: true, authRole: true, departmentId: true },
+    });
+    if (!target || target.orgId !== actor.orgId) throw new Error("Member not found.");
+
+    if (target.id === actor.id) {
+      throw new Error("You can't change your own role. Ask another admin to do it.");
+    }
+
+    if (target.authRole === parsedInput.authRole) {
+      return { name: target.name, authRole: target.authRole };
+    }
+
+    if (target.authRole === "admin" && parsedInput.authRole !== "admin") {
+      const admins = await prisma.member.count({ where: { orgId: actor.orgId, authRole: "admin" } });
+      if (admins <= 1) throw new Error("This is the only admin — promote someone else first.");
+    }
+
+    if (parsedInput.authRole === "hod" && !target.departmentId) {
+      throw new Error(
+        `${target.name} isn't in a department yet, and a head of department is scoped to one. Put them on a team first.`,
+      );
+    }
+
+    await prisma.member.update({
+      where: { id: target.id },
+      data: { authRole: parsedInput.authRole },
+    });
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: `changed ${target.name}'s role to ${parsedInput.authRole}`,
+      targetType: "Member",
+      targetId: target.id,
+    });
+
+    revalidatePath("/members");
+    revalidatePath(`/members/${target.id}`);
+    return { name: target.name, authRole: parsedInput.authRole };
   });

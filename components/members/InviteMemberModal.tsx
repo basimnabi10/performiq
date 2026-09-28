@@ -216,72 +216,25 @@ export function InviteMemberModal({
               </label>
             )}
 
-            <div>
-              <div className="piq-caption" style={{ marginBottom: 8 }}>
-                Role
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {ROLE_OPTIONS.filter((r) => r.value === "ic" || canGrantAdmin).map((r) => {
-                  const active = authRole === r.value;
-                  return (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => setAuthRole(r.value)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 11,
-                        padding: 13,
-                        borderRadius: 14,
-                        cursor: "pointer",
-                        textAlign: "left",
-                        fontFamily: "'Switzer',sans-serif",
-                        background: active ? "rgba(39,63,249,.08)" : "rgba(255,255,255,.5)",
-                        border: `1.5px solid ${active ? "#273FF9" : "rgba(255,255,255,.75)"}`,
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 11,
-                          background: active ? "linear-gradient(135deg,#3A63FA,#273FF9)" : "rgba(58,99,250,.10)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: active ? "#fff" : "#273FF9",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <iconify-icon icon={r.icon} width={17} />
-                      </span>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#181835" }}>{r.label}</span>
-                        <span style={{ display: "block", fontSize: 11, color: "#596392", marginTop: 1 }}>{r.blurb}</span>
-                      </span>
-                      <span
-                        style={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: "50%",
-                          flexShrink: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#fff",
-                          background: active ? "#273FF9" : "transparent",
-                          border: `1.5px solid ${active ? "#273FF9" : "rgba(168,175,203,.6)"}`,
-                          opacity: active ? 1 : 0.45,
-                        }}
-                      >
-                        <iconify-icon icon="ant-design:check-outlined" width={12} />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              Role
+              <select
+                className="piq-select"
+                value={authRole}
+                onChange={(e) => setAuthRole(e.target.value as typeof authRole)}
+                style={selectStyle}
+                required
+              >
+                {ROLE_OPTIONS.filter((r) => r.value === "ic" || canGrantAdmin).map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              <span style={{ fontSize: 11.5, color: "#596392", lineHeight: 1.5 }}>
+                {ROLE_OPTIONS.find((r) => r.value === authRole)?.blurb}
+              </span>
+            </label>
 
             {simple ? null : (
               <div style={{ display: "flex", gap: 5, padding: 5, background: "rgba(255,255,255,.55)", border: "1px solid rgba(255,255,255,.7)", borderRadius: 13 }}>

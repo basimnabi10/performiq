@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { departmentCycleWhere, findActiveCycleForDepartment } from "@/lib/cycles";
 import { DesignationModal } from "@/components/members/DesignationModal";
 import { MemberHero } from "@/components/members/MemberHero";
+import { RoleControl } from "@/components/members/RoleControl";
 import { MemberTrendChart } from "@/components/members/MemberTrendChart";
 import { ProfileSplitLayout } from "@/components/members/ProfileSplitLayout";
 import { CoachingNotes } from "@/components/notes/CoachingNotes";
@@ -236,14 +237,19 @@ export default async function MemberProfilePage({ params }: PageProps<"/members/
           ) : null
         }
         designationTrigger={
-          canEdit ? (
-            <DesignationModal
-              memberId={member.id}
-              currentTitle={member.jobTitle ?? ""}
-              memberName={member.name}
-              teamName={member.team?.name ?? "their team"}
-            />
-          ) : null
+          <>
+            {canEdit ? (
+              <DesignationModal
+                memberId={member.id}
+                currentTitle={member.jobTitle ?? ""}
+                memberName={member.name}
+                teamName={member.team?.name ?? "their team"}
+              />
+            ) : null}
+            {actor.authRole === "admin" && member.id !== actor.id ? (
+              <RoleControl memberId={member.id} memberName={member.name} currentRole={member.authRole} />
+            ) : null}
+          </>
         }
       />
 

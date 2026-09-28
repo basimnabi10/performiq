@@ -33,6 +33,12 @@ export const updateDesignationSchema = z.object({
   jobTitle: z.string().trim().min(2, { error: "Enter a title." }).max(80),
 });
 
+/** Changing what someone can do, after they were invited. */
+export const updateMemberRoleSchema = z.object({
+  memberId: z.string().min(1),
+  authRole: z.enum(invitableRoles),
+});
+
 export const removeMemberSchema = z.object({
   memberId: z.string().min(1),
 });
