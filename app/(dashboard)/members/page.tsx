@@ -101,9 +101,14 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
             <MembersTable
               cycleId={activeCycle?.id ?? null}
               canReview={actor.authRole === "admin" || actor.authRole === "hod" || actor.authRole === "manager"}
-              removableMemberIds={
-                actor.authRole === "admin" ? members.filter((m) => m.id !== actor.id).map((m) => m.id) : []
-              }
+              removableMemberIds={members
+                .filter((m) => {
+                  if (m.id === actor.id) return false;
+                  if (actor.authRole === "admin") return true;
+                  if (actor.authRole !== "hod" || !actor.departmentId) return false;
+                  return m.departmentId === actor.departmentId && m.authRole !== "admin" && m.authRole !== "hr";
+                })
+                .map((m) => m.id)}
               rows={members.map((m) => {
             const scores = scoreByMember.get(m.id);
             return {

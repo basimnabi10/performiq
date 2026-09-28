@@ -258,11 +258,23 @@ export const removeMember = authActionClient
   .schema(removeMemberSchema)
   .action(async ({ parsedInput, ctx }) => {
     const actor = ctx.member;
-    requireRole(actor, ["admin"]);
+    requireRole(actor, ["admin", "hod"]);
 
     const target = await prisma.member.findUnique({ where: { id: parsedInput.memberId } });
     if (!target || target.orgId !== actor.orgId) throw new Error("Member not found.");
     if (target.id === actor.id) throw new Error("You can't remove your own account.");
+
+    // A head of department runs one department, so that is who they can
+    // remove. Without this the role would reach across the whole
+    // organization, which is the one thing separating it from an admin.
+    if (actor.authRole === "hod") {
+      if (!actor.departmentId || target.departmentId !== actor.departmentId) {
+        throw new Error(`${target.name} isn't in your department.`);
+      }
+      if (target.authRole === "admin" || target.authRole === "hr") {
+        throw new Error("Only an admin can remove an admin or an HR account.");
+      }
+    }
 
     if (target.authRole === "admin") {
       const admins = await prisma.member.count({ where: { orgId: actor.orgId, authRole: "admin" } });
@@ -346,7 +358,7 @@ export const updateMemberRole = authActionClient
   .schema(updateMemberRoleSchema)
   .action(async ({ parsedInput, ctx }) => {
     const actor = ctx.member;
-    requireRole(actor, ["admin"]);
+    requireRole(actor, ["admin", "hod"]);
 
     const target = await prisma.member.findUnique({
       where: { id: parsedInput.memberId },
@@ -355,7 +367,23 @@ export const updateMemberRole = authActionClient
     if (!target || target.orgId !== actor.orgId) throw new Error("Member not found.");
 
     if (target.id === actor.id) {
-      throw new Error("You can't change your own role. Ask another admin to do it.");
+      throw new Error("You can't change your own role. Ask an admin to do it.");
+    }
+
+    // A head of department may move people around inside their own
+    // department, but not mint authority over the rest of the organization:
+    // admin and HR both see every department, so granting either would be a
+    // way to hand yourself — or a colleague — more than the role holds.
+    if (actor.authRole === "hod") {
+      if (!actor.departmentId || target.departmentId !== actor.departmentId) {
+        throw new Error(`${target.name} isn't in your department.`);
+      }
+      if (target.authRole === "admin" || target.authRole === "hr") {
+        throw new Error("Only an admin can change an admin or an HR account.");
+      }
+      if (parsedInput.authRole === "admin" || parsedInput.authRole === "hr") {
+        throw new Error("Only an admin can grant the admin or HR role.");
+      }
     }
 
     if (target.authRole === parsedInput.authRole) {

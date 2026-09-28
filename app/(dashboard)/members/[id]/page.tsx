@@ -246,7 +246,13 @@ export default async function MemberProfilePage({ params }: PageProps<"/members/
                 teamName={member.team?.name ?? "their team"}
               />
             ) : null}
-            {actor.authRole === "admin" && member.id !== actor.id ? (
+            {member.id !== actor.id &&
+            (actor.authRole === "admin" ||
+              (actor.authRole === "hod" &&
+                actor.departmentId != null &&
+                member.departmentId === actor.departmentId &&
+                member.authRole !== "admin" &&
+                member.authRole !== "hr")) ? (
               <RoleControl memberId={member.id} memberName={member.name} currentRole={member.authRole} />
             ) : null}
           </>
