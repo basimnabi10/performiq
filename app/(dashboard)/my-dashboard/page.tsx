@@ -9,6 +9,7 @@ import { TrendPanel } from "@/components/dashboard/hod/TrendPanel";
 import { MyReviewHistory } from "@/components/dashboard/member/MyReviewHistory";
 import { TeachALessonPanel } from "@/components/dashboard/member/TeachALessonPanel";
 import { MoodCheckinWidget } from "@/components/mood/MoodCheckinWidget";
+import { MonthPicker, type MonthOption } from "@/components/cycles/MonthPicker";
 import { daysLeftInWeek, weekLabel, weekStart } from "@/lib/weeks";
 import { isKpiScoreOnTarget } from "@/lib/kpi-status";
 
@@ -22,7 +23,7 @@ function timeAgo(date: Date): string {
   return `${days}d ago`;
 }
 
-export default async function MyDashboardPage() {
+export default async function MyDashboardPage({ searchParams }: PageProps<"/my-dashboard">) {
   const member = await getCurrentMember();
   if (member.authRole === "hr") redirect("/hr");
 
@@ -42,7 +43,31 @@ export default async function MyDashboardPage() {
 
   const teamName = myTeam?.name ?? null;
 
-  const activeCycle = cycleHistory.filter((c) => c.status === "in_progress").sort((a, b) => b.startDate.getTime() - a.startDate.getTime())[0] ?? null;
+  const runningCycle =
+    cycleHistory.filter((c) => c.status === "in_progress").sort((a, b) => b.startDate.getTime() - a.startDate.getTime())[0] ?? null;
+
+  // One row per period, not per cycle: each department runs its own for the
+  // same month, so September would otherwise be listed several times over.
+  const monthOptions: MonthOption[] = [];
+  for (const c of [...cycleHistory].sort((a, b) => b.startDate.getTime() - a.startDate.getTime())) {
+    const key = `${c.year}-${String(c.month).padStart(2, "0")}`;
+    const existing = monthOptions.find((m) => m.key === key);
+    if (!existing) monthOptions.push({ key, label: c.label, status: c.status });
+    else if (c.status === "in_progress" && existing.status !== "in_progress") existing.status = "in_progress";
+  }
+
+  const { month: rawMonth } = await searchParams;
+  const monthParam = Array.isArray(rawMonth) ? rawMonth[0] : rawMonth;
+  const selectedMonthKey =
+    (monthParam && monthOptions.some((m) => m.key === monthParam) ? monthParam : undefined) ??
+    (runningCycle ? `${runningCycle.year}-${String(runningCycle.month).padStart(2, "0")}` : undefined) ??
+    monthOptions[0]?.key ??
+    "";
+
+  // The cycle the numbers below are read against — the month being viewed,
+  // not whichever one happens to be open.
+  const activeCycle =
+    cycleHistory.find((c) => `${c.year}-${String(c.month).padStart(2, "0")}` === selectedMonthKey) ?? runningCycle;
 
   const [kpiScores, reviewsToGive, assignments, myReviews] = await Promise.all([
     activeCycle
@@ -100,6 +125,7 @@ export default async function MyDashboardPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
       <div>
         <div style={{ fontSize: 14, color: "#767FA5", fontWeight: 500 }}>{teamName ?? "My workspace"}</div>
         <div style={{ fontSize: 36, fontWeight: 500, letterSpacing: "-.02em", color: "#181835", marginTop: 2 }}>
@@ -108,6 +134,8 @@ export default async function MyDashboardPage() {
         <div style={{ fontSize: 15, color: "#596392", marginTop: 3 }}>
           {activeCycle ? `${activeCycle.label} · My view` : "No review cycle is currently active"}
         </div>
+      </div>
+      {monthOptions.length > 0 ? <MonthPicker months={monthOptions} selectedKey={selectedMonthKey} /> : null}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6,minmax(0,1fr))", gap: 24, alignItems: "stretch" }}>
