@@ -85,7 +85,7 @@ export function Button({
     gap: m.gap,
     height: m.height,
     padding: `0 ${m.padX}px`,
-    borderRadius: size === "header" ? 16 : 14,
+    borderRadius: 14,
     border: "none",
     fontFamily: "'Switzer', system-ui, sans-serif",
     fontWeight: 500,

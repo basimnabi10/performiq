@@ -471,9 +471,8 @@ function modeTabStyle(active: boolean): React.CSSProperties {
 
 const selectStyle: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,.75)",
-  // The scope and month pickers set the shape of a control in this app, so
-  // form fields take it too rather than rounding to their own value.
-  borderRadius: "var(--radius-pill)",
+  // One radius across the app, the same as every button and dropdown.
+  borderRadius: "var(--radius-lg)",
   minHeight: 46,
   padding: "10px 18px",
   fontFamily: "'Switzer',sans-serif",
