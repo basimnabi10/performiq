@@ -47,6 +47,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             { href: "/hr/employees", label: "Employees", icon: "ant-design:user-outlined" },
           ],
         },
+        { label: "Account", items: [{ href: "/settings", label: "Settings", icon: "ant-design:setting-outlined" }] },
       ]
     : isManager
     ? [
@@ -93,6 +94,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               { href: "/learning", label: "Learning", icon: "ant-design:read-outlined" },
             ],
           },
+          { label: "Account", items: [{ href: "/settings", label: "Settings", icon: "ant-design:setting-outlined" }] },
         ]
       : [
           {
@@ -100,6 +102,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             items: [{ href: "/my-dashboard", label: "My dashboard", icon: "ant-design:dashboard-outlined" }],
           },
           { label: "Growth", items: [{ href: "/learning", label: "Learning", icon: "ant-design:read-outlined" }] },
+          { label: "Account", items: [{ href: "/settings", label: "Settings", icon: "ant-design:setting-outlined" }] },
         ];
 
   const workspaceLabel = isManager
