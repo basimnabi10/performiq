@@ -85,12 +85,22 @@ export async function recomputeMemberKpiScores(
     }
   }
 
-  for (const [kpiId, { sum, count }] of byKpi) {
-    const score = Math.round((sum / count) * 100) / 100;
-    await tx.memberKpiScore.upsert({
-      where: { memberId_kpiId_cycleId: { memberId, kpiId, cycleId } },
-      create: { memberId, kpiId, cycleId, score, sourceCount: count },
-      update: { score, sourceCount: count, computedAt: new Date() },
+  // Replaced wholesale rather than upserted one at a time: this is a derived
+  // table, the rows for a member and cycle are recomputed together, and two
+  // statements hold however many KPIs the team has. It also clears scores for
+  // KPIs that are no longer part of the review, which the per-row upsert left
+  // behind.
+  await tx.memberKpiScore.deleteMany({ where: { memberId, cycleId } });
+
+  if (byKpi.size > 0) {
+    await tx.memberKpiScore.createMany({
+      data: [...byKpi].map(([kpiId, { sum, count }]) => ({
+        memberId,
+        kpiId,
+        cycleId,
+        score: Math.round((sum / count) * 100) / 100,
+        sourceCount: count,
+      })),
     });
   }
 }
@@ -124,5 +134,5 @@ export async function completeReview(reviewId: string): Promise<void> {
       memberId: review.revieweeId,
       cycleId: review.cycleId,
     });
-  });
+  }, { timeout: 20_000, maxWait: 10_000 });
 }
