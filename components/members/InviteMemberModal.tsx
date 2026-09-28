@@ -198,9 +198,11 @@ export function InviteMemberModal({
               onChange={(v) => {
                 const next = v as typeof authRole;
                 setAuthRole(next);
-                // Only a head of department may hold several teams, so
-                // stepping away from that role drops back to the first.
-                if (next !== "hod") setTeamIds((current) => current.slice(0, 1));
+                // An admin and HR hold no team, so anything chosen for them
+                // is dropped rather than saved and quietly ignored. Stepping
+                // out of head of department drops back to a single team.
+                if (next === "admin" || next === "hr") setTeamIds([]);
+                else if (next !== "hod") setTeamIds((current) => current.slice(0, 1));
               }}
               options={ROLE_OPTIONS.filter((r) => r.value === "ic" || canGrantAdmin).map((r) => ({
                 value: r.value,
@@ -211,7 +213,7 @@ export function InviteMemberModal({
               error={fieldError("authRole")}
             />
 
-            {simple ? (
+            {authRole === "admin" || authRole === "hr" ? null : simple ? (
               <div
                 style={{
                   display: "flex",

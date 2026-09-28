@@ -56,7 +56,15 @@ export const inviteMember = authActionClient
     if (parsedInput.authRole !== "hod" && teams.length > 1) {
       throw new Error("Only a head of department can be given more than one team.");
     }
-    const team = teams[0];
+
+    // An admin works across the organization and HR reads all of it, so
+    // neither belongs to a team. Everyone else has to be somewhere: a member
+    // with no team has no cycle, no KPIs and nobody to review them.
+    const teamless = parsedInput.authRole === "admin" || parsedInput.authRole === "hr";
+    if (!teamless && teams.length === 0) {
+      throw new Error("Choose the team they join.");
+    }
+    const team = teamless ? null : teams[0];
 
     // Only an admin can create another admin — otherwise anyone who can
     // invite could grant themselves a colleague with full org access.
@@ -103,8 +111,8 @@ export const inviteMember = authActionClient
       data: {
         orgId: actor.orgId,
         email,
-        teamId: team.id,
-        departmentId: team.departmentId,
+        teamId: team?.id ?? null,
+        departmentId: team?.departmentId ?? null,
         status: "invited",
         authRole: parsedInput.authRole,
         ...extra,
@@ -157,7 +165,7 @@ export const inviteMember = authActionClient
     // Being head of a team is recorded on the team, so the org chart says who
     // runs what. Access still comes from the department — this is the record,
     // not the permission.
-    if (parsedInput.authRole === "hod") {
+    if (parsedInput.authRole === "hod" && team) {
       await prisma.team.updateMany({
         where: { id: { in: parsedInput.teamIds } },
         data: { leadMemberId: created.id },
@@ -168,7 +176,7 @@ export const inviteMember = authActionClient
       });
     }
 
-    const activeCycle = await findActiveCycleForDepartment(actor.orgId, team.departmentId);
+    const activeCycle = team ? await findActiveCycleForDepartment(actor.orgId, team.departmentId) : null;
     if (activeCycle) {
       await prisma.review.createMany({
         data: [
@@ -194,11 +202,11 @@ export const inviteMember = authActionClient
       verb: "invited",
       targetType: "Member",
       targetId: created.id,
-      metadata: { name: created.name, team: team.name, source: extra.source, role: parsedInput.authRole, reusedExistingAccount },
+      metadata: { name: created.name, team: team?.name ?? null, source: extra.source, role: parsedInput.authRole, reusedExistingAccount },
     });
 
     revalidatePath("/members");
-    revalidatePath(`/teams/${team.id}`);
+    if (team) revalidatePath(`/teams/${team.id}`);
 
     return {
       memberId: created.id,
