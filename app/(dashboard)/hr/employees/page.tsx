@@ -35,10 +35,11 @@ export default async function HrEmployeesPage() {
     },
   });
 
-  // Submitted reviews only: a draft is not a judgement, so it is not part of
-  // anyone's record yet.
+  // Submitted reviews by someone else: a draft is not a judgement yet, and a
+  // self-review is the employee's own account rather than an assessment of
+  // them, so neither counts towards what is on record here.
   const completed = await prisma.review.findMany({
-    where: { reviewee: { orgId: actor.orgId }, status: "completed" },
+    where: { reviewee: { orgId: actor.orgId }, status: "completed", type: { not: "self" } },
     select: { revieweeId: true, overallScore: true, submittedAt: true },
   });
 

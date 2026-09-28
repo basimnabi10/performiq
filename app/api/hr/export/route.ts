@@ -39,6 +39,7 @@ export async function GET(request: Request) {
   const reviews = await prisma.review.findMany({
     where: {
       status: "completed",
+      type: { not: "self" },
       cycle: { orgId: actor.orgId, year, month: monthNumber },
     },
     orderBy: [{ submittedAt: "desc" }],
@@ -88,8 +89,8 @@ export async function GET(request: Request) {
         r.reviewee.department?.name ?? "",
         r.reviewee.team?.name ?? "",
         r.reviewee.manager?.name ?? "",
-        r.type === "self" ? "Self" : r.type === "manager" ? "Manager" : "Peer",
-        r.type === "self" ? r.reviewee.name : r.reviewer.name,
+        r.type === "manager" ? "Manager" : "Peer",
+        r.reviewer.name,
         r.submittedAt ? r.submittedAt.toISOString().slice(0, 10) : "",
         r.overallScore != null ? Number(r.overallScore).toFixed(2) : "",
         r.kpiScores.map((s) => `${s.kpi.name}: ${s.rating}/5`).join(" | "),

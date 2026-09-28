@@ -59,7 +59,9 @@ export default async function HrOverviewPage({ searchParams }: PageProps<"/hr">)
   const [reviews, headcount] = await Promise.all([
     cycleIds.length
       ? prisma.review.findMany({
-          where: { cycleId: { in: cycleIds } },
+          // Self-reviews are the employee's own account of themselves, not
+          // an assessment of them, so they are not part of what HR reads.
+          where: { cycleId: { in: cycleIds }, type: { not: "self" } },
           include: {
             reviewee: {
               select: {
@@ -285,7 +287,7 @@ export default async function HrOverviewPage({ searchParams }: PageProps<"/hr">)
                           {r.reviewee.team?.name ? ` · ${r.reviewee.team.name}` : ""}
                         </div>
                         <div className="piq-caption">
-                          {r.type === "self" ? "Self review" : r.reviewer.name}
+                          {r.reviewer.name}
                         </div>
                         <div className="piq-caption">
                           {r.submittedAt

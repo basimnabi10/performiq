@@ -30,7 +30,9 @@ export default async function HrEmployeePage({ params }: PageProps<"/hr/employee
   if (!member || member.orgId !== actor.orgId) notFound();
 
   const reviews = await prisma.review.findMany({
-    where: { revieweeId: member.id, status: "completed" },
+    // A self-review is what the person said about themselves, not a record
+    // of being assessed, so it is not part of what HR reads.
+    where: { revieweeId: member.id, status: "completed", type: { not: "self" } },
     orderBy: { submittedAt: "desc" },
     include: {
       reviewer: { select: { name: true } },
@@ -149,7 +151,7 @@ export default async function HrEmployeePage({ params }: PageProps<"/hr/employee
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 500, color: "var(--text-strong)" }}>{r.cycle.label}</div>
                     <div className="piq-caption" style={{ marginTop: 2 }}>
-                      {r.type === "self" ? "Self review" : `${r.type === "manager" ? "Manager review" : "Peer review"} · ${r.reviewer.name}`}
+                      {r.type === "manager" ? "Manager review" : "Peer review"} · {r.reviewer.name}
                       {r.submittedAt
                         ? ` · submitted ${r.submittedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
                         : ""}
