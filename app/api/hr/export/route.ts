@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { getCurrentMember } from "@/lib/authz";
-import { prisma } from "@/lib/prisma";
+import { STATUS_LABELS, loadHrDashboard } from "@/lib/hr-data";
 
 /**
  * One month of the review record as CSV.
  *
- * Submitted reviews only, matching the page: HR downloads what HR can see,
- * not more. Coaching notes and written check-in reasons are absent here for
- * the same reason they are absent from the page — they were promised to stay
- * between a member and their manager, and a spreadsheet is the easiest place
- * for that promise to leak.
+ * Built from the same `loadHrDashboard` pass the page renders, so the file
+ * and the screen can never disagree — an export computed separately drifts
+ * the first time either side changes, and the spreadsheet is the copy people
+ * forward. Everyone is listed, not only the reviewed: the rows with no score
+ * are the ones worth chasing.
+ *
+ * Coaching notes and written check-in reasons are absent here for the same
+ * reason they are absent from the page — they were promised to stay between
+ * a member and their manager, and a spreadsheet is the easiest place for
+ * that promise to leak.
  */
 function csvCell(value: string | number | null | undefined): string {
   const s = value == null ? "" : String(value);
@@ -29,37 +34,11 @@ export async function GET(request: Request) {
   }
 
   const month = new URL(request.url).searchParams.get("month") ?? "";
-  const match = /^(\d{4})-(\d{2})$/.exec(month);
-  if (!match) {
+  if (!/^(\d{4})-(\d{2})$/.test(month)) {
     return NextResponse.json({ error: "Pass a month as YYYY-MM." }, { status: 400 });
   }
-  const year = Number(match[1]);
-  const monthNumber = Number(match[2]);
 
-  const reviews = await prisma.review.findMany({
-    where: {
-      status: "completed",
-      type: { not: "self" },
-      cycle: { orgId: actor.orgId, year, month: monthNumber },
-    },
-    orderBy: [{ submittedAt: "desc" }],
-    include: {
-      cycle: { select: { label: true } },
-      reviewer: { select: { name: true } },
-      reviewee: {
-        select: {
-          name: true,
-          email: true,
-          empId: true,
-          jobTitle: true,
-          department: { select: { name: true } },
-          team: { select: { name: true } },
-          manager: { select: { name: true } },
-        },
-      },
-      kpiScores: { include: { kpi: { select: { name: true } } } },
-    },
-  });
+  const data = await loadHrDashboard(actor.orgId, month);
 
   const header = [
     "Month",
@@ -69,31 +48,33 @@ export async function GET(request: Request) {
     "Job title",
     "Department",
     "Team",
-    "Manager",
-    "Review type",
     "Reviewer",
-    "Submitted",
+    "Review status",
     "Overall score",
+    data.previousLabel ? `${data.previousLabel} score` : "Previous score",
+    "Change",
+    "Submitted",
     "KPI ratings",
   ];
 
   const lines = [header.map(csvCell).join(",")];
-  for (const r of reviews) {
+  for (const p of data.people) {
     lines.push(
       [
-        r.cycle.label,
-        r.reviewee.empId,
-        r.reviewee.name,
-        r.reviewee.email,
-        r.reviewee.jobTitle,
-        r.reviewee.department?.name ?? "",
-        r.reviewee.team?.name ?? "",
-        r.reviewee.manager?.name ?? "",
-        r.type === "manager" ? "Manager" : "Peer",
-        r.reviewer.name,
-        r.submittedAt ? r.submittedAt.toISOString().slice(0, 10) : "",
-        r.overallScore != null ? Number(r.overallScore).toFixed(2) : "",
-        r.kpiScores.map((s) => `${s.kpi.name}: ${s.rating}/5`).join(" | "),
+        data.selectedLabel,
+        p.empId,
+        p.name,
+        p.email,
+        p.jobTitle,
+        p.department,
+        p.team,
+        p.reviewerName ?? "",
+        STATUS_LABELS[p.state],
+        p.score != null ? p.score.toFixed(2) : "",
+        p.prevScore != null ? p.prevScore.toFixed(2) : "",
+        p.delta != null ? p.delta.toFixed(2) : "",
+        p.submittedAt ? p.submittedAt.slice(0, 10) : "",
+        p.kpis.map((k) => `${k.name}: ${k.rating}/5`).join(" | "),
       ]
         .map(csvCell)
         .join(","),

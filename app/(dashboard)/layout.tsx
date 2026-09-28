@@ -69,6 +69,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
             { href: "/learning", label: "Learning", icon: "ant-design:read-outlined" },
           ],
         },
+        // An HOD sees their own department; the company-wide record is the
+        // admin's and HR's to read, and /hr redirects anyone else away.
+        ...(member.authRole === "admin"
+          ? [
+              {
+                label: "Company",
+                items: [{ href: "/hr", label: "HR dashboard", icon: "ant-design:bank-outlined" }],
+              },
+            ]
+          : []),
         {
           label: member.authRole === "admin" ? "Admin" : "Account",
           items: [{ href: "/settings", label: "Settings", icon: "ant-design:setting-outlined" }],
