@@ -25,7 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (isPlaceholderName(member.name)) redirect("/complete-profile");
 
   const [organization, department, team] = await Promise.all([
-    prisma.organization.findUnique({ where: { id: member.orgId }, select: { name: true } }),
+    prisma.organization.findUnique({ where: { id: member.orgId }, select: { name: true, logoUrl: true } }),
     member.departmentId
       ? prisma.department.findUnique({ where: { id: member.departmentId }, select: { name: true } })
       : Promise.resolve(null),
@@ -122,6 +122,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar
         orgName={organization?.name ?? "PerformIQ"}
+        orgLogoUrl={organization?.logoUrl}
         workspaceLabel={workspaceLabel}
         workspaceSub={workspaceSub}
         workspaceIcon={workspaceIcon}

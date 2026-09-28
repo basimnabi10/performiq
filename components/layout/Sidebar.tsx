@@ -1,5 +1,7 @@
 "use client";
 
+import { OrgMark } from "@/components/layout/OrgMark";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/actions/auth";
@@ -18,6 +20,7 @@ interface NavSection {
 
 export interface SidebarProps {
   orgName: string;
+  orgLogoUrl?: string | null;
   workspaceLabel: string;
   workspaceSub: string;
   workspaceIcon: string;
@@ -30,6 +33,7 @@ export interface SidebarProps {
 
 export function Sidebar({
   orgName,
+  orgLogoUrl,
   workspaceLabel,
   workspaceSub,
   workspaceIcon,
@@ -66,18 +70,7 @@ export function Sidebar({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "4px 8px" }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            flexShrink: 0,
-            background:
-              "radial-gradient(circle at 32% 28%,#fff,#8BB0FF 28%,#273FF9 72%,#1C10C9)",
-            boxShadow:
-              "0 5px 12px rgba(39,63,249,.4),inset -2px -3px 6px rgba(14,6,125,.5),inset 2px 2px 6px rgba(255,255,255,.6)",
-          }}
-        />
+        <OrgMark src={orgLogoUrl} name={orgName} size={36} />
         <div>
           <div style={{ fontSize: 16, fontWeight: 500, color: "#181835", letterSpacing: "-.01em" }}>
             PerformIQ

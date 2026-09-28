@@ -121,6 +121,9 @@ enum LessonRequestStatus {
 model Organization {
   id        String   @id @default(cuid())
   name      String
+  /// Shown in the sidebar in place of the default mark. Null until an admin
+  /// uploads one.
+  logoUrl   String?
   createdAt DateTime @default(now())
 
   departments  Department[]

@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/authz";
+import { logActivity } from "@/lib/audit";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { updateMyNameSchema, uploadMyAvatarSchema } from "@/lib/validation/profile.schema";
+import { updateMyNameSchema, uploadMyAvatarSchema, uploadOrgLogoSchema } from "@/lib/validation/profile.schema";
 
 const BUCKET = "avatars";
 
@@ -99,3 +101,83 @@ export const updateMyName = authActionClient
     revalidatePath("/members");
     return { name: parsedInput.name };
   });
+
+/**
+ * The organization's mark, shown in the sidebar in place of the default.
+ *
+ * Admin-only: this is the one image in the app that everybody sees, so it is
+ * not something any member can change. It shares the avatars bucket under an
+ * `org/` prefix rather than needing a second one.
+ */
+export const uploadOrgLogo = authActionClient
+  .schema(uploadOrgLogoSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const actor = ctx.member;
+    requireRole(actor, ["admin"]);
+
+    const file = parsedInput.file;
+    const admin = createSupabaseAdminClient();
+    await ensureBucket(admin);
+
+    const extension =
+      file.type === "image/svg+xml"
+        ? "svg"
+        : file.type === "image/png"
+          ? "png"
+          : file.type === "image/webp"
+            ? "webp"
+            : file.type === "image/gif"
+              ? "gif"
+              : "jpg";
+    const path = `org/${actor.orgId}/${Date.now()}.${extension}`;
+
+    const { error } = await admin.storage
+      .from(BUCKET)
+      .upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: true });
+    if (error) throw new Error(`Couldn't upload that image: ${error.message}`);
+
+    const { data } = admin.storage.from(BUCKET).getPublicUrl(path);
+
+    const org = await prisma.organization.findUniqueOrThrow({
+      where: { id: actor.orgId },
+      select: { logoUrl: true },
+    });
+    await prisma.organization.update({ where: { id: actor.orgId }, data: { logoUrl: data.publicUrl } });
+
+    if (org.logoUrl?.includes(`/${BUCKET}/`)) {
+      const old = org.logoUrl.split(`/${BUCKET}/`)[1];
+      if (old) await admin.storage.from(BUCKET).remove([old]).catch(() => {});
+    }
+
+    await logActivity({
+      orgId: actor.orgId,
+      actorId: actor.id,
+      verb: "changed the organization logo",
+      targetType: "Organization",
+      targetId: actor.orgId,
+    });
+
+    revalidatePath("/settings");
+    revalidatePath("/", "layout");
+    return { logoUrl: data.publicUrl };
+  });
+
+/** Puts the default mark back. */
+export const removeOrgLogo = authActionClient.action(async ({ ctx }) => {
+  const actor = ctx.member;
+  requireRole(actor, ["admin"]);
+
+  const org = await prisma.organization.findUniqueOrThrow({
+    where: { id: actor.orgId },
+    select: { logoUrl: true },
+  });
+  if (org.logoUrl?.includes(`/${BUCKET}/`)) {
+    const path = org.logoUrl.split(`/${BUCKET}/`)[1];
+    if (path) await createSupabaseAdminClient().storage.from(BUCKET).remove([path]).catch(() => {});
+  }
+
+  await prisma.organization.update({ where: { id: actor.orgId }, data: { logoUrl: null } });
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+  return { removed: true };
+});

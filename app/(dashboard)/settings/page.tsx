@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { OrganizationSettingsForm } from "@/components/settings/OrganizationSettingsForm";
 import { DepartmentManager } from "@/components/settings/DepartmentManager";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
+import { OrgLogoSettings } from "@/components/settings/OrgLogoSettings";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Admin",
@@ -59,7 +60,10 @@ export default async function SettingsPage() {
           <div className="piq-h2">Organization</div>
           <div className="piq-caption">This name appears in the sidebar and on member invites.</div>
         </div>
-        <OrganizationSettingsForm currentName={organization.name} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 420 }}>
+          <OrgLogoSettings logoUrl={organization.logoUrl} orgName={organization.name} />
+          <OrganizationSettingsForm currentName={organization.name} />
+        </div>
       </section>
 
       <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
