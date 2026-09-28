@@ -123,7 +123,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         workspaceSub={workspaceSub}
         workspaceIcon={workspaceIcon}
         name={member.name}
-        role={member.jobTitle?.trim() || ROLE_LABEL[member.authRole] || member.authRole}
+        role={ROLE_LABEL[member.authRole] ?? member.authRole}
         sections={sections}
         avatarUrl={member.avatarUrl}
       />
