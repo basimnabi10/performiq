@@ -30,7 +30,14 @@ export default async function SettingsPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 720 }}>
-      <div className="piq-h1">Settings</div>
+      <div>
+        <div className="piq-h1">Settings</div>
+        <div className="piq-caption" style={{ marginTop: 4 }}>
+          {isAdmin
+            ? "Your own details, and how the organization is set up."
+            : "Your own details. Everything else here is set by an admin."}
+        </div>
+      </div>
 
       <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
@@ -46,8 +53,8 @@ export default async function SettingsPage() {
       </section>
 
       {!isAdmin ? null : (
-      <>
-      <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <>
+          <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
           <div className="piq-h2">Organization</div>
           <div className="piq-caption">This name appears in the sidebar and on member invites.</div>
@@ -69,7 +76,7 @@ export default async function SettingsPage() {
           }))}
         />
       </section>
-      </>
+        </>
       )}
     </div>
   );
