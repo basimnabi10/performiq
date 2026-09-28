@@ -39,9 +39,24 @@ export const inviteMember = authActionClient
     requireRole(actor, ["admin", "hod"]);
     await checkRateLimit(inviteRateLimit, actor.id);
 
-    const team = await prisma.team.findUnique({ where: { id: parsedInput.teamId } });
-    if (!team) throw new Error("Team not found.");
-    await requireScopeAccess(actor, { teamId: team.id });
+    const teams = await prisma.team.findMany({ where: { id: { in: parsedInput.teamIds } } });
+    if (teams.length !== parsedInput.teamIds.length) throw new Error("Team not found.");
+    for (const t of teams) await requireScopeAccess(actor, { teamId: t.id });
+
+    // What a person can reach is read from their single departmentId, so a
+    // head of several teams only works while those teams share a department.
+    // Saying so here beats handing someone a role that silently covers half
+    // of what they were told it would.
+    const departments = [...new Set(teams.map((t) => t.departmentId))];
+    if (departments.length > 1) {
+      throw new Error(
+        "Those teams are in different departments. A head of department is scoped to one department, so pick teams from a single one.",
+      );
+    }
+    if (parsedInput.authRole !== "hod" && teams.length > 1) {
+      throw new Error("Only a head of department can be given more than one team.");
+    }
+    const team = teams[0];
 
     // Only an admin can create another admin — otherwise anyone who can
     // invite could grant themselves a colleague with full org access.
@@ -139,6 +154,20 @@ export const inviteMember = authActionClient
     // Cycle shells are generated once, when a cycle starts — so without this
     // anyone invited mid-cycle has no review to fill in and no way to be
     // reviewed until the next cycle begins.
+    // Being head of a team is recorded on the team, so the org chart says who
+    // runs what. Access still comes from the department — this is the record,
+    // not the permission.
+    if (parsedInput.authRole === "hod") {
+      await prisma.team.updateMany({
+        where: { id: { in: parsedInput.teamIds } },
+        data: { leadMemberId: created.id },
+      });
+      await prisma.department.updateMany({
+        where: { id: team.departmentId, headMemberId: null },
+        data: { headMemberId: created.id },
+      });
+    }
+
     const activeCycle = await findActiveCycleForDepartment(actor.orgId, team.departmentId);
     if (activeCycle) {
       await prisma.review.createMany({

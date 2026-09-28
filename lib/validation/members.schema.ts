@@ -12,13 +12,13 @@ export const invitableRoles = ["admin", "hod", "hr", "ic"] as const;
 export const inviteMemberSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("manual"),
-    teamId: z.string().min(1),
+    teamIds: z.array(z.string().min(1)).min(1, { error: "Choose at least one team." }),
     email: z.email({ error: "Enter a valid email address." }),
     authRole: z.enum(invitableRoles).default("ic"),
   }),
   z.object({
     mode: z.literal("odoo"),
-    teamId: z.string().min(1),
+    teamIds: z.array(z.string().min(1)).min(1, { error: "Choose at least one team." }),
     lookupTerm: z.string().min(1, { error: "Enter an email or employee ID." }),
     authRole: z.enum(invitableRoles).default("ic"),
   }),

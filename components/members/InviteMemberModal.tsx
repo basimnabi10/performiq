@@ -4,6 +4,7 @@ import { useAction } from "next-safe-action/hooks";
 import { useEffect, useState } from "react";
 import { inviteMember, listOdooSuggestions, lookupOdooEmployee } from "@/actions/members";
 import { Button } from "@/components/ui/Button";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { FrostCard } from "@/components/ui/FrostCard";
 import { IconButton } from "@/components/ui/IconButton";
 
@@ -58,7 +59,7 @@ export function InviteMemberModal({
   canGrantAdmin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [teamId, setTeamId] = useState(teams[0]?.id ?? "");
+  const [teamIds, setTeamIds] = useState<string[]>(teams[0]?.id ? [teams[0].id] : []);
   // Odoo is disabled for now (see the tab below), so manual is the only
   // reachable mode -- but the state stays, because the lookup flow behind it
   // is complete and only waiting on credentials.
@@ -85,6 +86,10 @@ export function InviteMemberModal({
   }, [open, mode]);
 
   const error = invite.result.serverError;
+  const invalid = invite.result.validationErrors as
+    | Record<string, { _errors?: string[] } | undefined>
+    | undefined;
+  const fieldError = (name: string) => invalid?.[name]?._errors?.[0];
   const success = invite.result.data;
   const fetched = lookup.result.data;
 
@@ -179,13 +184,33 @@ export function InviteMemberModal({
             onSubmit={(e) => {
               e.preventDefault();
               if (mode === "manual") {
-                invite.execute({ mode: "manual", teamId, email, authRole });
+                invite.execute({ mode: "manual", teamIds, email, authRole });
               } else if (fetched) {
-                invite.execute({ mode: "odoo", teamId, lookupTerm: fetched.email, authRole });
+                invite.execute({ mode: "odoo", teamIds, lookupTerm: fetched.email, authRole });
               }
             }}
             style={{ display: "flex", flexDirection: "column", gap: 14 }}
           >
+            {(() => null)()}
+            <Dropdown
+              label="Role"
+              value={authRole}
+              onChange={(v) => {
+                const next = v as typeof authRole;
+                setAuthRole(next);
+                // Only a head of department may hold several teams, so
+                // stepping away from that role drops back to the first.
+                if (next !== "hod") setTeamIds((current) => current.slice(0, 1));
+              }}
+              options={ROLE_OPTIONS.filter((r) => r.value === "ic" || canGrantAdmin).map((r) => ({
+                value: r.value,
+                label: r.label,
+                description: r.blurb,
+                icon: r.icon,
+              }))}
+              error={fieldError("authRole")}
+            />
+
             {simple ? (
               <div
                 style={{
@@ -204,37 +229,21 @@ export function InviteMemberModal({
                 </span>
               </div>
             ) : (
-              <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                Team
-                <select className="piq-select" value={teamId} onChange={(e) => setTeamId(e.target.value)} style={selectStyle} required>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Dropdown
+                label={authRole === "hod" ? "Teams they head" : "Team"}
+                multiple={authRole === "hod"}
+                value={authRole === "hod" ? teamIds : (teamIds[0] ?? "")}
+                onChange={(v) => setTeamIds(Array.isArray(v) ? v : v ? [v] : [])}
+                placeholder={authRole === "hod" ? "Choose one or more teams" : "Choose a team"}
+                options={teams.map((t) => ({ value: t.id, label: t.name }))}
+                error={fieldError("teamIds")}
+                hint={
+                  authRole === "hod"
+                    ? "They are recorded as head of each one. Pick teams from a single department — that is the scope the role is read against."
+                    : undefined
+                }
+              />
             )}
-
-            <label className="piq-caption" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              Role
-              <select
-                className="piq-select"
-                value={authRole}
-                onChange={(e) => setAuthRole(e.target.value as typeof authRole)}
-                style={selectStyle}
-                required
-              >
-                {ROLE_OPTIONS.filter((r) => r.value === "ic" || canGrantAdmin).map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-              <span style={{ fontSize: 11.5, color: "#596392", lineHeight: 1.5 }}>
-                {ROLE_OPTIONS.find((r) => r.value === authRole)?.blurb}
-              </span>
-            </label>
 
             {simple ? null : (
               <div style={{ display: "flex", gap: 5, padding: 5, background: "rgba(255,255,255,.55)", border: "1px solid rgba(255,255,255,.7)", borderRadius: 13 }}>
