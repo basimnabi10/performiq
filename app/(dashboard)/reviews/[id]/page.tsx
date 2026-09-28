@@ -55,19 +55,17 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
   // "these two files disagree".
   const quarterClosed = review.cycle.quarter?.status === "closed";
   const monthClosed = review.cycle.status === "closed";
-  const isOwnSelfReview = review.type === "self" && review.reviewee.id === actor.id;
-  const someoneElsesSelfReview = review.type === "self" && !isOwnSelfReview;
-  const canEdit = someoneElsesSelfReview
+  // Older cycles created reviews people owed on themselves. Nobody scores
+  // themselves any more, so those stay readable and cannot be filled in.
+  const isSelfReview = review.reviewerId === review.revieweeId;
+  const canEdit = isSelfReview
     ? false
     : actor.authRole === "admin"
       ? !quarterClosed
       : isReviewer && !monthClosed;
 
-  // A self-review belongs to the person being reviewed. Someone senior
-  // opening it should be told that plainly and pointed at their own review of
-  // that person -- the old wording ("Only Usama Javed can score this review")
-  // read as though nobody but the employee may ever review them.
-  const isSelfReview = review.type === "self";
+  // Somebody senior opening one of these should be pointed at their own
+  // review of that person rather than left at a dead end.
   const canReviewThemselves =
     !isReviewer &&
     review.reviewee.id !== actor.id &&
@@ -79,7 +77,7 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
     : quarterClosed && actor.authRole === "admin"
       ? `Q${review.cycle.quarter?.index} ${review.cycle.quarter?.year} is finished, so its reviews are final.`
       : isSelfReview
-        ? `This is ${review.reviewee.name}'s own self-review, so only they can fill it in.`
+        ? `This one was raised against ${review.reviewee.name} themselves. Nobody reviews themselves — use your own review of them instead.`
         : !isReviewer
           ? `${review.reviewer.name} is the assigned reviewer for this one.`
           : `${review.cycle.label} is closed, so this review can no longer be changed. Ask an admin to correct it for you.`;
@@ -166,7 +164,7 @@ export default async function ReviewDetailPage({ params }: PageProps<"/reviews/[
         <div style={{ flex: 1 }}>
           <div className="piq-h2">{review.reviewee.name}</div>
           <div className="piq-caption">
-            {review.cycle.label} · {review.type === "self" ? "Self review" : review.type === "manager" ? "Manager review" : "Peer review"} ·
+            {review.cycle.label} · {review.type === "manager" ? "Manager review" : review.type === "peer" ? "Peer review" : "Self review"} ·
             reviewed by {review.reviewer.name}
           </div>
         </div>

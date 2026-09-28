@@ -141,7 +141,6 @@ export const inviteMember = authActionClient
     if (activeCycle) {
       await prisma.review.createMany({
         data: [
-          { cycleId: activeCycle.id, revieweeId: created.id, reviewerId: created.id, type: "self", status: "pending" },
           ...(created.managerId
             ? [
                 {

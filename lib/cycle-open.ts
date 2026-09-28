@@ -140,6 +140,11 @@ export async function openCycle(
 /**
  * Review shells for everyone in scope. Also used when someone joins
  * mid-cycle, so a new starter is not invisible until the next month.
+ *
+ * A shell is only created where someone else does the reviewing: a person is
+ * assessed by their manager or an assigned reviewer, never by themselves.
+ * Members with no manager on file get no shell here — assign a reviewer and
+ * one is created then.
  */
 export async function createReviewShells(
   orgId: string,
@@ -150,14 +155,6 @@ export async function createReviewShells(
     where: membersInScopeWhere(orgId, scope),
     select: { id: true, managerId: true },
   });
-
-  const selfReviews = members.map((m) => ({
-    cycleId,
-    revieweeId: m.id,
-    reviewerId: m.id,
-    type: "self" as const,
-    status: "pending" as const,
-  }));
 
   const managerReviews = members
     .filter((m) => m.managerId)
@@ -170,7 +167,7 @@ export async function createReviewShells(
     }));
 
   const { count } = await prisma.review.createMany({
-    data: [...selfReviews, ...managerReviews],
+    data: managerReviews,
     skipDuplicates: true,
   });
   return count;

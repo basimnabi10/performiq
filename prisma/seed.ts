@@ -429,14 +429,6 @@ async function main() {
           }
         }
 
-        // Self-review shell: completed for past cycles, still pending for the
-        // in-progress one (feeds the "reviews to give" widget realistically).
-        await prisma.review.upsert({
-          where: { cycleId_revieweeId_reviewerId_type: { cycleId: cycle.id, revieweeId: member.id, reviewerId: member.id, type: "self" } },
-          update: {},
-          create: { cycleId: cycle.id, revieweeId: member.id, reviewerId: member.id, type: "self", status: cycle.status === "closed" ? "completed" : "pending" },
-        });
-
         // One peer review per person per cycle, from a random teammate —
         // exercises peer-review data without overriding the manager score.
         const peers = teamMembers.filter((p) => p.key !== memberDef.key);

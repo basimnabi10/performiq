@@ -44,13 +44,12 @@ async function assertCanEditReview(
   review: { reviewerId: string; cycleId: string; type: string; revieweeId: string },
   actor: { id: string; authRole: string },
 ): Promise<void> {
-  // A self-review is the person's own account of their work. Nobody else
-  // completes it -- not an admin, not their HOD -- because a score submitted
-  // in someone's name, in their own voice, is not a correction but an
-  // impersonation. Reviewing that person is done through your OWN review of
-  // them (see openMemberReview).
-  if (review.type === "self" && review.revieweeId !== actor.id) {
-    throw new AuthzError("A self-review can only be completed by the person it belongs to.");
+  // Nobody scores themselves, including on the self-reviews that older
+  // cycles created before this rule existed: a person's record is what
+  // someone else said about them. Those rows are left readable but can no
+  // longer be filled in.
+  if (review.revieweeId === review.reviewerId) {
+    throw new AuthzError("Nobody reviews themselves — this one is assessed by a manager or an assigned reviewer.");
   }
 
   const cycle = await prisma.reviewCycle.findUnique({
@@ -114,12 +113,7 @@ export const submitReview = authActionClient
     await logActivity({
       orgId: actor.orgId,
       actorId: actor.id,
-      verb:
-        review.status === "completed"
-          ? "revised a submitted review"
-          : review.type === "self"
-            ? "submitted a self-review"
-            : "submitted a review",
+      verb: review.status === "completed" ? "revised a submitted review" : "submitted a review",
       targetType: "Review",
       targetId: review.id,
       metadata: { revieweeId: review.revieweeId },
@@ -199,9 +193,10 @@ export const startReview = authActionClient
     if (!reviewee) throw new Error("Member not found.");
     await requireScopeAccess(actor, { teamId: reviewee.teamId, departmentId: reviewee.departmentId });
 
-    // A self-review's reviewer is always the reviewee themself — never trust
-    // a client-supplied reviewerId for this type.
-    const reviewerId = parsedInput.type === "self" ? reviewee.id : parsedInput.reviewerId;
+    if (parsedInput.reviewerId === parsedInput.revieweeId) {
+      throw new Error(`${reviewee.name} cannot be their own reviewer. Assign their manager or another reviewer.`);
+    }
+    const reviewerId = parsedInput.reviewerId;
 
     const review = await prisma.review.upsert({
       where: {
