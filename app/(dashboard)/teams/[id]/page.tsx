@@ -191,6 +191,7 @@ export default async function TeamDetailPage({ params, searchParams }: PageProps
             email: m.email,
             jobTitle: m.jobTitle,
             teamName: m.team?.name ?? null,
+            authRole: m.authRole,
             reviewStatus: reviewStatusFor(m.id, m.status),
             kpiScore: avg(scoreByMember.get(m.id)),
           }))}

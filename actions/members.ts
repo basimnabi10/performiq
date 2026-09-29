@@ -176,7 +176,11 @@ export const inviteMember = authActionClient
       });
     }
 
-    const activeCycle = team ? await findActiveCycleForDepartment(actor.orgId, team.departmentId) : null;
+    // Only an invitable role that is actually reviewed gets a shell; manager
+    // is not invitable, so ic is the whole list here.
+    const reviewable = parsedInput.authRole === "ic";
+    const activeCycle =
+      team && reviewable ? await findActiveCycleForDepartment(actor.orgId, team.departmentId) : null;
     if (activeCycle) {
       await prisma.review.createMany({
         data: [

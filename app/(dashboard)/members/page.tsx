@@ -117,6 +117,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
               email: m.email,
               jobTitle: m.jobTitle,
               teamName: m.team?.name ?? null,
+              authRole: m.authRole,
               reviewStatus: reviewStatusFor(m.id, m.status),
               kpiScore: scores?.length ? scores.reduce((s, v) => s + v, 0) / scores.length : null,
             };

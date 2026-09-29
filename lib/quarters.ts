@@ -105,18 +105,30 @@ export async function listCycleScopes(orgId: string): Promise<CycleScopeTarget[]
 }
 
 /** Members reviewed under a given scope. */
+/**
+ * The roles a review cycle covers.
+ *
+ * Reviews run downward: a head of department reviews the people in their
+ * department and is not reviewed within it, and neither an admin nor HR is
+ * assessed by this process at all. Listing it once means the cycle opener,
+ * the member lists and the review pages cannot drift on who is reviewable.
+ */
+export const REVIEWABLE_ROLES = ["ic", "manager"] as const;
+
 export function membersInScopeWhere(orgId: string, scope: CycleScopeTarget): Prisma.MemberWhereInput {
-  if (scope.teamId) return { orgId, teamId: scope.teamId };
+  const reviewable = { authRole: { in: [...REVIEWABLE_ROLES] } };
+  if (scope.teamId) return { orgId, teamId: scope.teamId, ...reviewable };
   if (scope.departmentId) {
     return {
       orgId,
       departmentId: scope.departmentId,
+      ...reviewable,
       // A member on a team that runs its own cycles is reviewed there, not
       // twice -- once under the team and again under its department.
       OR: [{ teamId: null }, { team: { runsOwnCycles: false } }],
     };
   }
-  return { orgId };
+  return { orgId, ...reviewable };
 }
 
 /**

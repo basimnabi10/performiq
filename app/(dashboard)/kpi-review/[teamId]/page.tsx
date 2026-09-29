@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentMember, requireScopeAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { findActiveCycle } from "@/lib/cycles";
+import { REVIEWABLE_ROLES } from "@/lib/quarters";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ReviewMemberCard } from "@/components/reviews/ReviewMemberCard";
@@ -44,7 +45,7 @@ export default async function KpiReviewTeamPage({ params }: PageProps<"/kpi-revi
   }
 
   const members = await prisma.member.findMany({
-    where: { teamId: team.id },
+    where: { teamId: team.id, authRole: { in: [...REVIEWABLE_ROLES] } },
     orderBy: { name: "asc" },
     select: { id: true, name: true, jobTitle: true, avatarUrl: true },
   });

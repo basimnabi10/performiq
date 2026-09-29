@@ -11,6 +11,7 @@ export interface MembersTableRow {
   email: string;
   jobTitle: string | null;
   teamName: string | null;
+  authRole: string;
   reviewStatus: ReviewStatusKind;
   kpiScore: number | null;
 }
@@ -23,11 +24,23 @@ const REVIEW_STATUS_STYLE: Record<ReviewStatusKind, { label: string; color: stri
   invited: { label: "Invited", color: "#596392", bg: "rgba(89,99,146,.14)" },
 };
 
-const GRID_COLUMNS = "1fr 190px 160px 110px 140px";
-const GRID_COLUMNS_NO_TEAM = "1fr 200px 130px 120px 140px";
+const GRID_COLUMNS = "1fr 150px 140px 150px 100px 130px";
+const GRID_COLUMNS_NO_TEAM = "1fr 150px 140px 150px 100px 130px";
 // Removing gets its own trailing column so the actions keep their place.
-const GRID_COLUMNS_REMOVABLE = "1fr 190px 160px 110px 140px 40px";
-const GRID_COLUMNS_NO_TEAM_REMOVABLE = "1fr 200px 130px 120px 140px 40px";
+const GRID_COLUMNS_REMOVABLE = "1fr 150px 140px 150px 100px 130px 40px";
+const GRID_COLUMNS_NO_TEAM_REMOVABLE = "1fr 150px 140px 150px 100px 130px 40px";
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Admin",
+  hod: "Head of dept",
+  manager: "Manager",
+  ic: "Team member",
+  hr: "Human resources",
+};
+
+// A head of department, an admin and HR are not reviewed, so their row says
+// so rather than showing a status that will never change.
+const REVIEWED_ROLES = ["ic", "manager"];
 
 export function MembersTable({
   rows,
@@ -77,7 +90,8 @@ export function MembersTable({
           }}
         >
           <div>Member</div>
-          <div>{showTeam ? "Team & role" : "Role"}</div>
+          <div>Team</div>
+          <div>Role</div>
           <div>Review status</div>
           <div>KPI score</div>
           <div />
@@ -113,31 +127,33 @@ export function MembersTable({
                   </div>
                 </Link>
 
-                {showTeam ? (
-                  <div>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        fontSize: 11,
-                        fontWeight: 500,
-                        padding: "3px 9px",
-                        borderRadius: 7,
-                        color: m.teamName === "Product Design" ? "#273FF9" : "#596392",
-                        background: m.teamName === "Product Design" ? "rgba(58,99,250,.13)" : "rgba(89,99,146,.14)",
-                      }}
-                    >
-                      {m.teamName ?? "Unassigned"}
-                    </span>
-                    <div style={{ fontSize: 12, color: "#767FA5", marginTop: 4 }}>{m.jobTitle ?? "—"}</div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 14, color: "#454D7A" }}>{m.jobTitle ?? "—"}</div>
-                )}
+                <div>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      fontSize: 11,
+                      fontWeight: 500,
+                      padding: "3px 9px",
+                      borderRadius: 7,
+                      color: m.teamName ? "#273FF9" : "#596392",
+                      background: m.teamName ? "rgba(58,99,250,.13)" : "rgba(89,99,146,.14)",
+                    }}
+                  >
+                    {m.teamName ?? "No team"}
+                  </span>
+                  <div style={{ fontSize: 12, color: "#767FA5", marginTop: 4 }}>{m.jobTitle ?? "—"}</div>
+                </div>
+
+                <div style={{ fontSize: 13, color: "#454D7A" }}>{ROLE_LABEL[m.authRole] ?? m.authRole}</div>
 
                 <div>
-                  <span style={{ display: "inline-flex", fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 8, color: status.color, background: status.bg }}>
-                    {status.label}
-                  </span>
+                  {REVIEWED_ROLES.includes(m.authRole) ? (
+                    <span style={{ display: "inline-flex", fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 8, color: status.color, background: status.bg }}>
+                      {status.label}
+                    </span>
+                  ) : (
+                    <span className="piq-caption">Not reviewed</span>
+                  )}
                 </div>
 
                 <div style={{ fontSize: 16, fontWeight: 500, color: "#181835", fontVariantNumeric: "tabular-nums" }}>
@@ -157,7 +173,9 @@ export function MembersTable({
                   memberId={m.id}
                   memberName={m.name}
                   cycleId={cycleId ?? null}
-                  canReview={canReview}
+                  // Offering to review someone the cycle never covers would open a
+                  // form nobody can submit.
+                  canReview={canReview && REVIEWED_ROLES.includes(m.authRole)}
                 />
 
                 {canRemoveAny ? (
